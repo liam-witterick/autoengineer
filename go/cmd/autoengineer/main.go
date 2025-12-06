@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	version = "1.0.0"
+	version = "2.1.0"
 )
 
 var (
@@ -134,7 +134,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("analysis failed: %w", err)
 	}
-	
+
 	fmt.Println()
 
 	// Display scanner summary
@@ -378,7 +378,7 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tr
 
 		scopes := []string{"security", "pipeline", "infra"}
 		enabledScopes := []string{}
-		
+
 		for _, s := range scopes {
 			if !cfg.IsScopeDisabled(s) {
 				enabledScopes = append(enabledScopes, s)
@@ -396,7 +396,7 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tr
 			if tracker != nil {
 				tracker.StartScope(s)
 			}
-			
+
 			go func(scopeName string) {
 				var analyzer analysis.Analyzer
 				switch scopeName {
@@ -407,7 +407,7 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tr
 				case "infra":
 					analyzer = analysis.NewInfraAnalyzer(base)
 				}
-				
+
 				results, err := analyzer.Run(ctx)
 				resultCh <- result{scope: scopeName, findings: results, err: err}
 			}(s)
@@ -418,7 +418,7 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tr
 		for i := 0; i < len(enabledScopes); i++ {
 			res := <-resultCh
 			allResults = append(allResults, res)
-			
+
 			if tracker != nil {
 				if res.err != nil {
 					tracker.FailScope(res.scope, res.err)
