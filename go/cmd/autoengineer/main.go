@@ -415,13 +415,15 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tr
 			}
 		}
 
-		// Check for errors and merge findings
+		// Check for errors and merge findings with deduplication
+		var findingSlices [][]findings.Finding
 		for _, res := range allResults {
 			if res.err != nil {
 				return nil, fmt.Errorf("%s analysis failed: %w", res.scope, res.err)
 			}
-			allFindings = append(allFindings, res.findings...)
+			findingSlices = append(findingSlices, res.findings)
 		}
+		allFindings = findings.Merge(findingSlices...)
 
 	default:
 		return nil, fmt.Errorf("invalid scope: %s (must be security|pipeline|infra|all)", scope)
