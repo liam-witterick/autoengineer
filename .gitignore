@@ -1,5 +1,6 @@
 # Go build artifacts
 go/autoengineer
+autoengineer
 go/dist/
 dist/
 *.exe

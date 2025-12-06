@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -66,15 +67,16 @@ func (c *Client) RunAnalysis(ctx context.Context, prompt string) ([]findings.Fin
 	return results, nil
 }
 
-// RunFix runs copilot to fix an issue locally
+// RunFix runs copilot suggest to provide local fix suggestions interactively
 func (c *Client) RunFix(ctx context.Context, prompt string) error {
-	cmd := exec.CommandContext(ctx, c.BinaryPath, "-i", prompt)
+	// Use "gh copilot suggest" for interactive local fixes
+	cmd := exec.CommandContext(ctx, "gh", "copilot", "suggest", prompt)
 	
-	// Connect stdin/stdout/stderr so user can interact
-	cmd.Stdin = nil // Don't connect stdin for now
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-
+	// Connect to stdin/stdout/stderr so user can interact
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	
 	return cmd.Run()
 }
 
@@ -84,11 +86,18 @@ func (c *Client) RunDelegate(ctx context.Context, prompt string) error {
 	delegatePrompt := "/delegate " + prompt
 	cmd := exec.CommandContext(ctx, c.BinaryPath, "-i", delegatePrompt)
 	
-	cmd.Stdin = nil
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-
-	return cmd.Run()
+	// Run in background - capture output for error reporting
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	
+	if err := cmd.Run(); err != nil {
+		if stderr.Len() > 0 {
+			return fmt.Errorf("delegation failed: %w (stderr: %s)", err, stderr.String())
+		}
+		return err
+	}
+	
+	return nil
 }
 
 // DeduplicateFindings uses Copilot to intelligently deduplicate and merge related findings
