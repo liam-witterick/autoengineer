@@ -23,7 +23,7 @@ func NewManager(cfg *config.ScannerConfig) *Manager {
 		NewCheckovScanner(),
 		NewTrivyScanner(),
 	}
-	
+
 	return &Manager{
 		scanners: defaultScanners,
 		config:   cfg,
@@ -33,11 +33,11 @@ func NewManager(cfg *config.ScannerConfig) *Manager {
 // DetectScanners returns status of all scanners
 func (m *Manager) DetectScanners() []ScannerStatus {
 	var statuses []ScannerStatus
-	
+
 	for _, scanner := range m.scanners {
 		installed := scanner.IsInstalled()
 		enabled := m.isScannerEnabled(scanner.Name(), installed)
-		
+
 		status := ScannerStatus{
 			Name:      scanner.Name(),
 			Type:      scanner.Type(),
@@ -46,11 +46,11 @@ func (m *Manager) DetectScanners() []ScannerStatus {
 			Enabled:   enabled,
 			Skipped:   !enabled,
 		}
-		
+
 		if installed {
 			status.Version = scanner.Version()
 		}
-		
+
 		if !enabled {
 			if !installed {
 				status.Reason = "not installed"
@@ -58,10 +58,10 @@ func (m *Manager) DetectScanners() []ScannerStatus {
 				status.Reason = "disabled in config"
 			}
 		}
-		
+
 		statuses = append(statuses, status)
 	}
-	
+
 	return statuses
 }
 
@@ -71,7 +71,7 @@ func (m *Manager) isScannerEnabled(name string, installed bool) bool {
 	if m.config != nil && m.config.IsDisabled(name) {
 		return false
 	}
-	
+
 	// For local scanners (checkov, trivy), only run if installed
 	// For cloud scanners, check if explicitly enabled in config
 	switch name {
@@ -89,7 +89,7 @@ func (m *Manager) isScannerEnabled(name string, installed bool) bool {
 // RunAll runs all enabled scanners in parallel
 func (m *Manager) RunAll(ctx context.Context, scope string) ([]findings.Finding, []ScannerStatus) {
 	statuses := m.DetectScanners()
-	
+
 	// Filter to enabled scanners
 	var enabledScanners []Scanner
 	for i, scanner := range m.scanners {
@@ -97,27 +97,27 @@ func (m *Manager) RunAll(ctx context.Context, scope string) ([]findings.Finding,
 			enabledScanners = append(enabledScanners, scanner)
 		}
 	}
-	
+
 	if len(enabledScanners) == 0 {
 		return []findings.Finding{}, statuses
 	}
-	
+
 	// Print scanner start message
 	fmt.Fprintln(os.Stderr)
-	
+
 	// Run scanners in parallel
 	results := make(chan ScanResult, len(enabledScanners))
 	var wg sync.WaitGroup
-	
+
 	for _, scanner := range enabledScanners {
 		wg.Add(1)
-		
+
 		// Print starting message
 		fmt.Fprintf(os.Stderr, "   🔍 Running %s...\n", scanner.Name())
-		
+
 		go func(s Scanner) {
 			defer wg.Done()
-			
+
 			scanFindings, err := s.Run(ctx, scope)
 			results <- ScanResult{
 				Scanner:  s.Name(),
@@ -126,22 +126,22 @@ func (m *Manager) RunAll(ctx context.Context, scope string) ([]findings.Finding,
 			}
 		}(scanner)
 	}
-	
+
 	// Wait for all to complete
 	wg.Wait()
 	close(results)
-	
+
 	// Collect all findings and update statuses
 	var allFindings []findings.Finding
 	scanResults := make(map[string]ScanResult)
-	
+
 	for result := range results {
 		scanResults[result.Scanner] = result
 		if result.Error == nil {
 			allFindings = append(allFindings, result.Findings...)
 		}
 	}
-	
+
 	// Update statuses with results
 	for i := range statuses {
 		if statuses[i].Enabled {
@@ -149,7 +149,7 @@ func (m *Manager) RunAll(ctx context.Context, scope string) ([]findings.Finding,
 				statuses[i].Ran = result.Error == nil
 				statuses[i].Found = len(result.Findings)
 				statuses[i].Error = result.Error
-				
+
 				// Print completion message
 				if result.Error == nil {
 					fmt.Fprintf(os.Stderr, "   ✅ %s: %d finding(s)\n", statuses[i].Name, len(result.Findings))
@@ -159,6 +159,6 @@ func (m *Manager) RunAll(ctx context.Context, scope string) ([]findings.Finding,
 			}
 		}
 	}
-	
+
 	return allFindings, statuses
 }

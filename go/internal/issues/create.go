@@ -116,7 +116,7 @@ func (c *Client) AddDelegatedLabel(ctx context.Context, issueNumber int) error {
 func (c *Client) CreateIssue(ctx context.Context, finding findings.Finding) (int, error) {
 	emoji := severityEmoji(finding.Severity)
 	title := fmt.Sprintf("%s %s", emoji, finding.Title)
-	
+
 	body := formatIssueBody(finding)
 
 	issueData := map[string]interface{}{

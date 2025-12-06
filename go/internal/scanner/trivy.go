@@ -48,19 +48,19 @@ func (s *TrivyScanner) Version() string {
 	if !s.IsInstalled() {
 		return ""
 	}
-	
+
 	cmd := exec.Command(s.binaryPath, "--version")
 	output, err := cmd.Output()
 	if err != nil {
 		return "installed"
 	}
-	
+
 	// Parse version from output (first line typically)
 	lines := strings.Split(string(output), "\n")
 	if len(lines) > 0 {
 		return strings.TrimSpace(lines[0])
 	}
-	
+
 	return "installed"
 }
 
@@ -74,12 +74,12 @@ func (s *TrivyScanner) Run(ctx context.Context, scope string) ([]findings.Findin
 		"--quiet",
 		".",
 	}
-	
+
 	// Add severity filter based on scope
 	if scope == "security" || scope == "all" {
 		args = append(args, "--severity", trivySeverities)
 	}
-	
+
 	cmd := exec.CommandContext(ctx, s.binaryPath, args...)
 	output, err := cmd.Output()
 	if err != nil {
@@ -89,7 +89,7 @@ func (s *TrivyScanner) Run(ctx context.Context, scope string) ([]findings.Findin
 		}
 		// Continue to parse even if there was an error
 	}
-	
+
 	// Parse Trivy JSON output
 	return s.parseResults(output, scope)
 }
@@ -100,22 +100,22 @@ type trivyResult struct {
 }
 
 type trivyFileResult struct {
-	Target         string              `json:"Target"`
-	Class          string              `json:"Class"`
-	Type           string              `json:"Type"`
+	Target            string           `json:"Target"`
+	Class             string           `json:"Class"`
+	Type              string           `json:"Type"`
 	Misconfigurations []trivyMisconfig `json:"Misconfigurations"`
 }
 
 type trivyMisconfig struct {
-	Type       string `json:"Type"`
-	ID         string `json:"ID"`
-	Title      string `json:"Title"`
-	Description string `json:"Description"`
-	Message    string `json:"Message"`
-	Resolution string `json:"Resolution"`
-	Severity   string `json:"Severity"`
-	PrimaryURL string `json:"PrimaryURL"`
-	References []string `json:"References"`
+	Type        string   `json:"Type"`
+	ID          string   `json:"ID"`
+	Title       string   `json:"Title"`
+	Description string   `json:"Description"`
+	Message     string   `json:"Message"`
+	Resolution  string   `json:"Resolution"`
+	Severity    string   `json:"Severity"`
+	PrimaryURL  string   `json:"PrimaryURL"`
+	References  []string `json:"References"`
 }
 
 // parseResults parses Trivy JSON output into findings
@@ -125,9 +125,9 @@ func (s *TrivyScanner) parseResults(output []byte, scope string) ([]findings.Fin
 		// If JSON parsing fails, return empty results (Trivy may not have found anything)
 		return []findings.Finding{}, nil
 	}
-	
+
 	var results []findings.Finding
-	
+
 	// Process all misconfigurations
 	for _, fileResult := range result.Results {
 		for _, misconfig := range fileResult.Misconfigurations {
@@ -136,24 +136,24 @@ func (s *TrivyScanner) parseResults(output []byte, scope string) ([]findings.Fin
 			if misconfig.Message != "" {
 				description = misconfig.Message
 			}
-			
+
 			finding := findings.Finding{
-				Title:       misconfig.Title,
-				Description: description,
+				Title:          misconfig.Title,
+				Description:    description,
 				Recommendation: misconfig.Resolution,
-				Files:       []string{fileResult.Target},
-				Severity:    mapTrivySeverity(misconfig.Severity),
-				Category:    findings.CategorySecurity,
+				Files:          []string{fileResult.Target},
+				Severity:       mapTrivySeverity(misconfig.Severity),
+				Category:       findings.CategorySecurity,
 			}
-			
+
 			// Generate ID
 			prefix := findings.PrefixSecurity
 			finding.ID = analysis.GenerateID(prefix, finding.Title, finding.Files)
-			
+
 			results = append(results, finding)
 		}
 	}
-	
+
 	return results, nil
 }
 

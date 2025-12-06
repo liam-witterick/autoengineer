@@ -30,7 +30,7 @@ func TestScannerConfigIsEnabled(t *testing.T) {
 			expected: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.config.IsEnabled(tt.scanner)
@@ -67,7 +67,7 @@ func TestScannerConfigIsDisabled(t *testing.T) {
 			expected: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.config.IsDisabled(tt.scanner)
@@ -84,11 +84,11 @@ func TestLoadScannerConfigNoFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expected no error with missing config file, got %v", err)
 	}
-	
+
 	if cfg == nil {
 		t.Fatal("Expected non-nil config")
 	}
-	
+
 	// Should return empty config
 	if len(cfg.Enabled) != 0 {
 		t.Errorf("Expected empty enabled list, got %v", cfg.Enabled)

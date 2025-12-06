@@ -10,16 +10,16 @@ import (
 type Scanner interface {
 	// Name returns the scanner name
 	Name() string
-	
+
 	// IsInstalled checks if the scanner is available
 	IsInstalled() bool
-	
+
 	// Version returns the scanner version if installed
 	Version() string
-	
+
 	// Run executes the scanner and returns findings
 	Run(ctx context.Context, scope string) ([]findings.Finding, error)
-	
+
 	// Type returns the scanner type (local or cloud)
 	Type() ScannerType
 }

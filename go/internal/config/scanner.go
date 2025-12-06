@@ -8,9 +8,9 @@ import (
 
 // ScannerConfig represents the scanner configuration
 type ScannerConfig struct {
-	Enabled  []string          `yaml:"enabled"`
-	Disabled []string          `yaml:"disabled"`
-	Aikido   *AikidoConfig     `yaml:"aikido,omitempty"`
+	Enabled  []string      `yaml:"enabled"`
+	Disabled []string      `yaml:"disabled"`
+	Aikido   *AikidoConfig `yaml:"aikido,omitempty"`
 }
 
 // AikidoConfig represents Aikido-specific configuration
@@ -52,7 +52,7 @@ func LoadScannerConfig() (*ScannerConfig, error) {
 
 	// Parse the full config structure
 	var fullConfig FullConfig
-	
+
 	if err := yaml.Unmarshal(data, &fullConfig); err != nil {
 		return nil, err
 	}

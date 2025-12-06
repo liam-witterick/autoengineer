@@ -159,10 +159,10 @@ func TestFilterBySeverity(t *testing.T) {
 	}
 
 	tests := []struct {
-		name             string
-		minSeverity      string
-		expectedCount    int
-		expectedIDs      []string
+		name          string
+		minSeverity   string
+		expectedCount int
+		expectedIDs   []string
 	}{
 		{
 			name:          "low severity includes all",
@@ -199,17 +199,17 @@ func TestFilterBySeverity(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := FilterBySeverity(findings, tt.minSeverity)
-			
+
 			if len(result) != tt.expectedCount {
 				t.Errorf("expected %d findings, got %d", tt.expectedCount, len(result))
 			}
-			
+
 			// Check that the expected IDs are present
 			resultIDs := make(map[string]bool)
 			for _, f := range result {
 				resultIDs[f.ID] = true
 			}
-			
+
 			for _, expectedID := range tt.expectedIDs {
 				if !resultIDs[expectedID] {
 					t.Errorf("expected finding %s to be present", expectedID)

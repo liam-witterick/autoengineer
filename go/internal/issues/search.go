@@ -33,7 +33,7 @@ func extractLabelNames(labels []labelStruct) []string {
 func (c *Client) FindByID(ctx context.Context, checkID string) (*SearchResult, error) {
 	query := fmt.Sprintf("%s in:body repo:%s/%s state:open label:%s", checkID, c.owner, c.repo, c.label)
 	encodedQuery := url.QueryEscape(query)
-	
+
 	var result struct {
 		Items []struct {
 			Number int           `json:"number"`
@@ -67,7 +67,7 @@ func (c *Client) FindByTitle(ctx context.Context, title string) (*SearchResult, 
 	if len(searchTitle) > 50 {
 		searchTitle = searchTitle[:50]
 	}
-	
+
 	// Clean title for search (remove special chars)
 	searchTitle = strings.Map(func(r rune) rune {
 		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == ' ' {
@@ -78,7 +78,7 @@ func (c *Client) FindByTitle(ctx context.Context, title string) (*SearchResult, 
 
 	query := fmt.Sprintf("\"%s\" in:title repo:%s/%s state:open", searchTitle, c.owner, c.repo)
 	encodedQuery := url.QueryEscape(query)
-	
+
 	var result struct {
 		Items []struct {
 			Number int           `json:"number"`
@@ -160,7 +160,7 @@ func (c *Client) HasDelegatedLabel(ctx context.Context, issueNumber int) (bool, 
 func (c *Client) ListOpenIssues(ctx context.Context) ([]SearchResult, error) {
 	query := fmt.Sprintf("repo:%s/%s state:open label:%s", c.owner, c.repo, c.label)
 	encodedQuery := url.QueryEscape(query)
-	
+
 	var result struct {
 		Items []struct {
 			Number int           `json:"number"`

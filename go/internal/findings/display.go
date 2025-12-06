@@ -47,13 +47,13 @@ func DisplayFindings(findings []Finding, opts DisplayOptions) {
 		f := findings[i]
 		emoji := SeverityEmoji(f.Severity)
 		fmt.Printf("%d. %s %s [%s]\n", i+1, emoji, f.Title, f.ID)
-		
+
 		if opts.ShowCategory {
 			fmt.Printf("   Category: %s\n", f.Category)
 		}
-		
+
 		fmt.Printf("   Files: %s\n", joinFiles(f.Files))
-		
+
 		if opts.ShowDescription && f.Description != "" {
 			desc := f.Description
 			if opts.TruncateDesc > 0 && len(desc) > opts.TruncateDesc {
@@ -61,7 +61,7 @@ func DisplayFindings(findings []Finding, opts DisplayOptions) {
 			}
 			fmt.Printf("   Description: %s\n", desc)
 		}
-		
+
 		if opts.ShowAll {
 			fmt.Println()
 		}

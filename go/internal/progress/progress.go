@@ -177,7 +177,7 @@ func (st *ScopeTracker) CompleteScope(scope string, count int) {
 	}
 
 	st.done++
-	
+
 	// Print result
 	emoji := getScopeEmoji(scope)
 	fmt.Fprintf(st.output, "   ✅ %s %s: %d finding(s)\n", emoji, scope, count)
@@ -197,7 +197,7 @@ func (st *ScopeTracker) FailScope(scope string, err error) {
 	}
 
 	st.done++
-	
+
 	emoji := getScopeEmoji(scope)
 	fmt.Fprintf(st.output, "   ❌ %s %s: failed (%v)\n", emoji, scope, err)
 }
