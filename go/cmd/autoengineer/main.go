@@ -398,14 +398,20 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tr
 			}
 
 			go func(scopeName string) {
+				// Create a new client for each concurrent scope to avoid race conditions
+				scopeClient := copilot.NewClient()
+				scopeBase := analysis.BaseAnalyzer{
+					Client: scopeClient,
+				}
+
 				var analyzer analysis.Analyzer
 				switch scopeName {
 				case "security":
-					analyzer = analysis.NewSecurityAnalyzer(base)
+					analyzer = analysis.NewSecurityAnalyzer(scopeBase)
 				case "pipeline":
-					analyzer = analysis.NewPipelineAnalyzer(base)
+					analyzer = analysis.NewPipelineAnalyzer(scopeBase)
 				case "infra":
-					analyzer = analysis.NewInfraAnalyzer(base)
+					analyzer = analysis.NewInfraAnalyzer(scopeBase)
 				}
 
 				results, err := analyzer.Run(ctx)
