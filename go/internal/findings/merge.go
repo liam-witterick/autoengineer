@@ -54,7 +54,8 @@ func MergeWithContext(ctx context.Context, deduplicator Deduplicator, findingArr
 	// Try AI-based deduplication first if available
 	if deduplicator != nil {
 		deduplicated, err := deduplicator.Deduplicate(ctx, all)
-		if err == nil && len(deduplicated) > 0 {
+		if err == nil {
+			// AI deduplication succeeded, use its results even if empty
 			merged = deduplicated
 		} else {
 			// Fallback to local grouping if AI fails

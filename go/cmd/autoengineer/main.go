@@ -280,7 +280,10 @@ func isGitRepo() bool {
 
 func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig) ([]findings.Finding, error) {
 	client := copilot.NewClient()
+	return runAnalysisWithClient(ctx, scope, cfg, client)
+}
 
+func runAnalysisWithClient(ctx context.Context, scope string, cfg *config.IgnoreConfig, client *copilot.Client) ([]findings.Finding, error) {
 	base := analysis.BaseAnalyzer{
 		Client: client,
 	}
@@ -384,7 +387,6 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig) ([
 		}
 
 		// Merge findings from all scopes and deduplicate using Copilot AI
-		client := copilot.NewClient()
 		allFindings = findings.MergeWithContext(ctx, client, secResult.findings, pipeResult.findings, infraResult.findings)
 
 	default:
@@ -396,6 +398,9 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig) ([
 
 // runAnalysisWithScanners runs both Copilot analysis and external scanners in parallel
 func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.IgnoreConfig, scannerCfg *config.ScannerConfig, skipScanners bool) ([]findings.Finding, []scanner.ScannerStatus, error) {
+	// Create Copilot client once for reuse
+	client := copilot.NewClient()
+	
 	type result struct {
 		findings []findings.Finding
 		statuses []scanner.ScannerStatus
@@ -408,7 +413,7 @@ func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.Igno
 
 	// Run Copilot analysis
 	go func() {
-		copilotFindings, err := runAnalysis(ctx, scope, cfg)
+		copilotFindings, err := runAnalysisWithClient(ctx, scope, cfg, client)
 		copilotCh <- result{findings: copilotFindings, err: err}
 	}()
 
@@ -433,7 +438,6 @@ func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.Igno
 	}
 
 	// Merge findings from all sources and deduplicate using Copilot AI
-	client := copilot.NewClient()
 	allFindings := findings.MergeWithContext(ctx, client, copilotResult.findings, scannerResult.findings)
 
 	return allFindings, scannerResult.statuses, nil
