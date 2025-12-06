@@ -492,7 +492,7 @@ func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.Igno
 
 	// Run Copilot analysis
 	go func() {
-copilotFindings, err := runAnalysisWithClient(ctx, scope, cfg, client, tracker)
+		copilotFindings, err := runAnalysisWithClient(ctx, scope, cfg, client, tracker)
 		copilotCh <- result{findings: copilotFindings, err: err}
 	}()
 
