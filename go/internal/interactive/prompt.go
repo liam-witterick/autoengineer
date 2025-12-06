@@ -235,6 +235,12 @@ func (s *InteractiveSession) handleLater(ctx context.Context) error {
 	
 	for _, item := range selectedItems {
 		finding := item.Finding
+		if finding == nil {
+			fmt.Printf("⚠️  Warning: skipping invalid item\n")
+			skipped++
+			continue
+		}
+		
 		// Check if issue exists
 		exists, matchType, err := s.issuesClient.IssueExists(ctx, finding.ID, finding.Title)
 		if err != nil {
