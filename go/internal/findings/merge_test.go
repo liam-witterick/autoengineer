@@ -414,21 +414,6 @@ func TestMergeFiles(t *testing.T) {
 	}
 }
 
-func TestDeduplicate(t *testing.T) {
-	findings := []Finding{
-		{ID: "SEC-001", Title: "Security issue in production environment configuration is insecure"},
-		{ID: "SEC-002", Title: "Security issue in production environment configuration needs fix"}, // Similar title (first 50 chars same)
-		{ID: "PIPE-001", Title: "Pipeline optimization needed"},
-	}
-
-	result := deduplicate(findings)
-
-	// First two have similar titles (first 50 chars), should keep only first one
-	if len(result) != 2 {
-		t.Errorf("expected 2 findings after deduplication, got %d", len(result))
-	}
-}
-
 func TestCountBySeverity(t *testing.T) {
 	findings := []Finding{
 		{Severity: SeverityHigh},

@@ -5,6 +5,30 @@ import (
 	"strings"
 )
 
+// Grouping and similarity thresholds
+const (
+	// MinSignificantWords is the minimum number of significant words required in a title
+	// for semantic similarity matching to avoid merging overly generic titles
+	MinSignificantWords = 3
+
+	// TitleSimilarityThreshold is the minimum overlap score (0.0-1.0) for titles to be considered similar
+	TitleSimilarityThreshold = 0.75
+
+	// DescriptionSimilarityThreshold is the minimum overlap score for descriptions to be considered similar
+	DescriptionSimilarityThreshold = 0.6
+
+	// RecommendationSimilarityThreshold is the minimum overlap score for recommendations to be considered similar
+	RecommendationSimilarityThreshold = 0.6
+)
+
+// stopWords contains common words to exclude from semantic similarity analysis
+var stopWords = map[string]bool{
+	"a": true, "an": true, "and": true, "are": true, "as": true, "at": true,
+	"be": true, "by": true, "for": true, "from": true, "has": true, "he": true,
+	"in": true, "is": true, "it": true, "its": true, "of": true, "on": true,
+	"that": true, "the": true, "to": true, "was": true, "will": true, "with": true,
+}
+
 // Merge combines multiple finding arrays and deduplicates them
 func Merge(findingArrays ...[]Finding) []Finding {
 	// Combine all findings
@@ -121,12 +145,12 @@ func areTitlesSimilar(a, b string) bool {
 	
 	// Don't merge if either title has very few significant words (too generic)
 	// This prevents overly broad matches like "Security issue" matching everything
-	if len(wordsA) < 3 || len(wordsB) < 3 {
+	if len(wordsA) < MinSignificantWords || len(wordsB) < MinSignificantWords {
 		return false
 	}
 
-	// Check for substantial overlap (75% or more of shorter title)
-	return calculateOverlapScore(a, b) >= 0.75
+	// Check for substantial overlap
+	return calculateOverlapScore(a, b) >= TitleSimilarityThreshold
 }
 
 // areDescriptionsSimilar checks if descriptions indicate the same issue
@@ -139,7 +163,7 @@ func areDescriptionsSimilar(a, b string) bool {
 	}
 
 	// Extract key terms and check for overlap
-	return calculateOverlapScore(a, b) >= 0.6
+	return calculateOverlapScore(a, b) >= DescriptionSimilarityThreshold
 }
 
 // areRecommendationsSimilar checks if recommendations are similar
@@ -152,7 +176,7 @@ func areRecommendationsSimilar(a, b string) bool {
 	}
 
 	// Check for substantial overlap in recommendations
-	return calculateOverlapScore(a, b) >= 0.6
+	return calculateOverlapScore(a, b) >= RecommendationSimilarityThreshold
 }
 
 // calculateOverlapScore computes a similarity score based on word overlap
@@ -187,14 +211,6 @@ func calculateOverlapScore(a, b string) float64 {
 
 // extractWords extracts significant words from text (excluding common words)
 func extractWords(text string) map[string]bool {
-	// Common words to ignore
-	stopWords := map[string]bool{
-		"a": true, "an": true, "and": true, "are": true, "as": true, "at": true,
-		"be": true, "by": true, "for": true, "from": true, "has": true, "he": true,
-		"in": true, "is": true, "it": true, "its": true, "of": true, "on": true,
-		"that": true, "the": true, "to": true, "was": true, "will": true, "with": true,
-	}
-
 	words := make(map[string]bool)
 	for _, word := range strings.Fields(text) {
 		// Clean word
@@ -243,31 +259,6 @@ func mergeFiles(filesA, filesB []string) []string {
 		if !seen[file] {
 			seen[file] = true
 			result = append(result, file)
-		}
-	}
-
-	return result
-}
-
-// deduplicate removes findings with similar titles (legacy function, replaced by groupAndMerge)
-func deduplicate(findings []Finding) []Finding {
-	if len(findings) == 0 {
-		return findings
-	}
-
-	seen := make(map[string]bool)
-	result := make([]Finding, 0, len(findings))
-
-	for _, finding := range findings {
-		// Use first 50 chars of lowercase title as key for fuzzy matching
-		title := strings.ToLower(finding.Title)
-		if len(title) > 50 {
-			title = title[:50]
-		}
-
-		if !seen[title] {
-			seen[title] = true
-			result = append(result, finding)
 		}
 	}
 
