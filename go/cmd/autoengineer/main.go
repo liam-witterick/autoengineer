@@ -13,6 +13,7 @@ import (
 	"github.com/liam-witterick/autoengineer/go/internal/copilot"
 	"github.com/liam-witterick/autoengineer/go/internal/findings"
 	"github.com/liam-witterick/autoengineer/go/internal/issues"
+	"github.com/liam-witterick/autoengineer/go/internal/progress"
 	"github.com/liam-witterick/autoengineer/go/internal/scanner"
 	"github.com/spf13/cobra"
 )
@@ -121,8 +122,9 @@ func run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Run analysis
+	// Run analysis with progress tracking
 	fmt.Println("\n🔍 Running analysis...")
+	fmt.Println()
 
 	// Determine if scanners should run
 	skipScanners := flagNoScanners || flagFast
@@ -131,6 +133,8 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("analysis failed: %w", err)
 	}
+	
+	fmt.Println()
 
 	// Display scanner summary
 	if !skipScanners && len(scannerStatuses) > 0 {
@@ -278,7 +282,7 @@ func isGitRepo() bool {
 	return cmd.Run() == nil
 }
 
-func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig) ([]findings.Finding, error) {
+func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tracker *progress.ScopeTracker) ([]findings.Finding, error) {
 	client := copilot.NewClient()
 
 	base := analysis.BaseAnalyzer{
@@ -293,10 +297,19 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig) ([
 			fmt.Println("   ⚠️  Security scope is disabled")
 			return []findings.Finding{}, nil
 		}
+		if tracker != nil {
+			tracker.StartScope("security")
+		}
 		analyzer := analysis.NewSecurityAnalyzer(base)
 		results, err := analyzer.Run(ctx)
 		if err != nil {
+			if tracker != nil {
+				tracker.FailScope("security", err)
+			}
 			return nil, err
+		}
+		if tracker != nil {
+			tracker.CompleteScope("security", len(results))
 		}
 		allFindings = results
 
@@ -305,10 +318,19 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig) ([
 			fmt.Println("   ⚠️  Pipeline scope is disabled")
 			return []findings.Finding{}, nil
 		}
+		if tracker != nil {
+			tracker.StartScope("pipeline")
+		}
 		analyzer := analysis.NewPipelineAnalyzer(base)
 		results, err := analyzer.Run(ctx)
 		if err != nil {
+			if tracker != nil {
+				tracker.FailScope("pipeline", err)
+			}
 			return nil, err
+		}
+		if tracker != nil {
+			tracker.CompleteScope("pipeline", len(results))
 		}
 		allFindings = results
 
@@ -317,73 +339,91 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig) ([
 			fmt.Println("   ⚠️  Infra scope is disabled")
 			return []findings.Finding{}, nil
 		}
+		if tracker != nil {
+			tracker.StartScope("infra")
+		}
 		analyzer := analysis.NewInfraAnalyzer(base)
 		results, err := analyzer.Run(ctx)
 		if err != nil {
+			if tracker != nil {
+				tracker.FailScope("infra", err)
+			}
 			return nil, err
+		}
+		if tracker != nil {
+			tracker.CompleteScope("infra", len(results))
 		}
 		allFindings = results
 
 	case "all":
 		// Run all scopes concurrently
 		type result struct {
+			scope    string
 			findings []findings.Finding
 			err      error
 		}
 
-		secCh := make(chan result, 1)
-		pipeCh := make(chan result, 1)
-		infraCh := make(chan result, 1)
-
-		// Security
-		go func() {
-			if cfg.IsScopeDisabled("security") {
-				secCh <- result{findings: []findings.Finding{}}
-				return
+		scopes := []string{"security", "pipeline", "infra"}
+		enabledScopes := []string{}
+		
+		for _, s := range scopes {
+			if !cfg.IsScopeDisabled(s) {
+				enabledScopes = append(enabledScopes, s)
 			}
-			analyzer := analysis.NewSecurityAnalyzer(base)
-			results, err := analyzer.Run(ctx)
-			secCh <- result{findings: results, err: err}
-		}()
+		}
 
-		// Pipeline
-		go func() {
-			if cfg.IsScopeDisabled("pipeline") {
-				pipeCh <- result{findings: []findings.Finding{}}
-				return
-			}
-			analyzer := analysis.NewPipelineAnalyzer(base)
-			results, err := analyzer.Run(ctx)
-			pipeCh <- result{findings: results, err: err}
-		}()
+		if len(enabledScopes) == 0 {
+			return []findings.Finding{}, nil
+		}
 
-		// Infrastructure
-		go func() {
-			if cfg.IsScopeDisabled("infra") {
-				infraCh <- result{findings: []findings.Finding{}}
-				return
+		resultCh := make(chan result, len(enabledScopes))
+
+		// Start each enabled scope
+		for _, s := range enabledScopes {
+			if tracker != nil {
+				tracker.StartScope(s)
 			}
-			analyzer := analysis.NewInfraAnalyzer(base)
-			results, err := analyzer.Run(ctx)
-			infraCh <- result{findings: results, err: err}
-		}()
+			
+			go func(scopeName string) {
+				var analyzer analysis.Analyzer
+				switch scopeName {
+				case "security":
+					analyzer = analysis.NewSecurityAnalyzer(base)
+				case "pipeline":
+					analyzer = analysis.NewPipelineAnalyzer(base)
+				case "infra":
+					analyzer = analysis.NewInfraAnalyzer(base)
+				}
+				
+				results, err := analyzer.Run(ctx)
+				resultCh <- result{scope: scopeName, findings: results, err: err}
+			}(s)
+		}
 
 		// Collect results
-		secResult := <-secCh
-		pipeResult := <-pipeCh
-		infraResult := <-infraCh
+		allResults := make([]result, 0, len(enabledScopes))
+		for i := 0; i < len(enabledScopes); i++ {
+			res := <-resultCh
+			allResults = append(allResults, res)
+			
+			if tracker != nil {
+				if res.err != nil {
+					tracker.FailScope(res.scope, res.err)
+				} else {
+					tracker.CompleteScope(res.scope, len(res.findings))
+				}
+			}
+		}
 
-		if secResult.err != nil {
-			return nil, fmt.Errorf("security analysis failed: %w", secResult.err)
+		// Check for errors and merge findings with deduplication
+		var findingSlices [][]findings.Finding
+		for _, res := range allResults {
+			if res.err != nil {
+				return nil, fmt.Errorf("%s analysis failed: %w", res.scope, res.err)
+			}
+			findingSlices = append(findingSlices, res.findings)
 		}
-		if pipeResult.err != nil {
-			return nil, fmt.Errorf("pipeline analysis failed: %w", pipeResult.err)
-		}
-		if infraResult.err != nil {
-			return nil, fmt.Errorf("infrastructure analysis failed: %w", infraResult.err)
-		}
-
-		allFindings = findings.Merge(secResult.findings, pipeResult.findings, infraResult.findings)
+		allFindings = findings.Merge(findingSlices...)
 
 	default:
 		return nil, fmt.Errorf("invalid scope: %s (must be security|pipeline|infra|all)", scope)
@@ -400,13 +440,39 @@ func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.Igno
 		err      error
 	}
 
+	// Determine scopes to analyze
+	var scopes []string
+	if scope == "all" {
+		scopes = []string{"security", "pipeline", "infra"}
+		// Filter out disabled scopes
+		enabledScopes := []string{}
+		for _, s := range scopes {
+			if !cfg.IsScopeDisabled(s) {
+				enabledScopes = append(enabledScopes, s)
+			}
+		}
+		scopes = enabledScopes
+	} else {
+		if !cfg.IsScopeDisabled(scope) {
+			scopes = []string{scope}
+		} else {
+			scopes = []string{}
+		}
+	}
+
+	// Create progress tracker
+	var tracker *progress.ScopeTracker
+	if len(scopes) > 0 {
+		tracker = progress.NewScopeTracker(scopes)
+	}
+
 	// Run Copilot analysis and scanners in parallel
 	copilotCh := make(chan result, 1)
 	scannerCh := make(chan result, 1)
 
 	// Run Copilot analysis
 	go func() {
-		copilotFindings, err := runAnalysis(ctx, scope, cfg)
+		copilotFindings, err := runAnalysis(ctx, scope, cfg, tracker)
 		copilotCh <- result{findings: copilotFindings, err: err}
 	}()
 
@@ -425,6 +491,11 @@ func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.Igno
 	// Collect results
 	copilotResult := <-copilotCh
 	scannerResult := <-scannerCh
+
+	// Cleanup progress tracker
+	if tracker != nil {
+		tracker.Finish()
+	}
 
 	if copilotResult.err != nil {
 		return nil, nil, copilotResult.err

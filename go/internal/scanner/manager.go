@@ -2,6 +2,8 @@ package scanner
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"sync"
 
 	"github.com/liam-witterick/autoengineer/go/internal/config"
@@ -100,12 +102,19 @@ func (m *Manager) RunAll(ctx context.Context, scope string) ([]findings.Finding,
 		return []findings.Finding{}, statuses
 	}
 	
+	// Print scanner start message
+	fmt.Fprintln(os.Stderr)
+	
 	// Run scanners in parallel
 	results := make(chan ScanResult, len(enabledScanners))
 	var wg sync.WaitGroup
 	
 	for _, scanner := range enabledScanners {
 		wg.Add(1)
+		
+		// Print starting message
+		fmt.Fprintf(os.Stderr, "   🔍 Running %s...\n", scanner.Name())
+		
 		go func(s Scanner) {
 			defer wg.Done()
 			
@@ -140,6 +149,13 @@ func (m *Manager) RunAll(ctx context.Context, scope string) ([]findings.Finding,
 				statuses[i].Ran = result.Error == nil
 				statuses[i].Found = len(result.Findings)
 				statuses[i].Error = result.Error
+				
+				// Print completion message
+				if result.Error == nil {
+					fmt.Fprintf(os.Stderr, "   ✅ %s: %d finding(s)\n", statuses[i].Name, len(result.Findings))
+				} else {
+					fmt.Fprintf(os.Stderr, "   ⚠️  %s: failed (%v)\n", statuses[i].Name, result.Error)
+				}
 			}
 		}
 	}
