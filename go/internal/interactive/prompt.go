@@ -329,21 +329,38 @@ func (s *InteractiveSession) parseSelection(selection string, items []Actionable
 // fixLocal delegates to Copilot CLI for local fixes
 func (s *InteractiveSession) fixLocal(ctx context.Context, items []ActionableItem) error {
 	fmt.Println()
-	fmt.Println("🔧 Local fix not yet implemented")
-	fmt.Println("   This would invoke: gh copilot suggest")
+	fmt.Println("🔧 Fixing locally with Copilot CLI...")
 	fmt.Println()
 	
-	// For each item, we would:
-	// 1. Format the issue/finding as a prompt
-	// 2. Run: gh copilot suggest "<prompt>"
-	// 3. User interacts with copilot CLI directly
-	
 	for _, item := range items {
+		var prompt string
+		
 		if item.IsExisting {
-			fmt.Printf("   📌 Issue #%d: %s\n", *item.IssueNum, item.IssueTitle)
+			fmt.Printf("📌 Issue #%d: %s\n", *item.IssueNum, item.IssueTitle)
+			prompt = fmt.Sprintf("Fix the issue: %s (see %s/%s#%d for details)", 
+				item.IssueTitle, s.owner, s.repo, *item.IssueNum)
 		} else {
-			fmt.Printf("   📌 Finding: %s\n", item.Finding.Title)
+			fmt.Printf("📌 Finding: %s\n", item.Finding.Title)
+			prompt = fmt.Sprintf("Fix: %s. %s\nFiles: %s\nRecommendation: %s",
+				item.Finding.Title,
+				item.Finding.Description,
+				strings.Join(item.Finding.Files, ", "),
+				item.Finding.Recommendation)
 		}
+		
+		fmt.Println()
+		fmt.Printf("Running: gh copilot suggest...\n")
+		fmt.Println()
+		
+		if err := s.copilotClient.RunFix(ctx, prompt); err != nil {
+			fmt.Printf("⚠️  Warning: copilot suggest failed: %v\n", err)
+			fmt.Println()
+			continue
+		}
+		
+		fmt.Println()
+		fmt.Println("✅ Copilot suggest completed")
+		fmt.Println()
 	}
 	
 	return nil
