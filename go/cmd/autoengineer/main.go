@@ -12,6 +12,7 @@ import (
 	"github.com/liam-witterick/autoengineer/go/internal/config"
 	"github.com/liam-witterick/autoengineer/go/internal/copilot"
 	"github.com/liam-witterick/autoengineer/go/internal/findings"
+	"github.com/liam-witterick/autoengineer/go/internal/interactive"
 	"github.com/liam-witterick/autoengineer/go/internal/issues"
 	"github.com/liam-witterick/autoengineer/go/internal/scanner"
 	"github.com/spf13/cobra"
@@ -182,11 +183,23 @@ func run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Interactive mode (simplified for now)
-	fmt.Println("\n💡 Findings saved to", flagOutput)
-	fmt.Println("   Use --create-issues flag to automatically create GitHub issues")
+	// Interactive mode
+	owner, repo, err := getRepoInfo()
+	if err != nil {
+		return fmt.Errorf("failed to get repo info: %w", err)
+	}
 
-	return nil
+	label := os.Getenv("AUTOENGINEER_LABEL")
+	if label == "" {
+		label = "autoengineer"
+	}
+
+	session, err := interactive.NewSession(filtered, owner, repo, label)
+	if err != nil {
+		return fmt.Errorf("failed to create interactive session: %w", err)
+	}
+
+	return session.Run(ctx)
 }
 
 func checkDependencies() error {
