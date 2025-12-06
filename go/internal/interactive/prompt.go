@@ -179,8 +179,50 @@ func (s *InteractiveSession) handleLater(ctx context.Context) error {
 		return nil
 	}
 	
+	// Convert findings to items for display
+	allItems := s.convertFindingsToItems()
+	
+	// Display all items
 	fmt.Println()
-	fmt.Println("📝 Creating GitHub issues for new findings...")
+	fmt.Println("📋 Available items to track:")
+	fmt.Println()
+	
+	for i, item := range allItems {
+		emoji := findings.SeverityEmoji(item.Finding.Severity)
+		fmt.Printf("%d. %s [NEW] %s\n", i+1, emoji, item.Finding.Title)
+	}
+	
+	// Get user selection
+	fmt.Println()
+	fmt.Print("Select items to track (e.g., 1,3,5 or 'all' or 'cancel'): ")
+	selectionInput, err := s.reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read selection: %w", err)
+	}
+	
+	selection := strings.TrimSpace(selectionInput)
+	if strings.ToLower(selection) == "cancel" {
+		fmt.Println("❌ Cancelled")
+		return nil
+	}
+	
+	var selectedItems []ActionableItem
+	if strings.ToLower(selection) == "all" {
+		selectedItems = allItems
+	} else {
+		selectedItems, err = s.parseSelection(selection, allItems)
+		if err != nil {
+			return err
+		}
+	}
+	
+	if len(selectedItems) == 0 {
+		fmt.Println("❌ No items selected")
+		return nil
+	}
+	
+	fmt.Println()
+	fmt.Println("📝 Creating GitHub issues for selected findings...")
 	
 	// Ensure label exists
 	if err := s.issuesClient.EnsureLabel(ctx); err != nil {
@@ -191,7 +233,8 @@ func (s *InteractiveSession) handleLater(ctx context.Context) error {
 	skipped := 0
 	failed := 0
 	
-	for _, finding := range s.findings {
+	for _, item := range selectedItems {
+		finding := item.Finding
 		// Check if issue exists
 		exists, matchType, err := s.issuesClient.IssueExists(ctx, finding.ID, finding.Title)
 		if err != nil {
@@ -204,7 +247,7 @@ func (s *InteractiveSession) handleLater(ctx context.Context) error {
 		}
 		
 		fmt.Printf("📝 Creating: %s\n", finding.Title)
-		issueNum, err := s.issuesClient.CreateIssue(ctx, finding)
+		issueNum, err := s.issuesClient.CreateIssue(ctx, *finding)
 		if err != nil {
 			fmt.Printf("   ❌ Failed: %v\n", err)
 			failed++
