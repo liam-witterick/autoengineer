@@ -1,0 +1,19 @@
+# .github/autoengineer.yaml
+# Configuration file for AutoEngineer
+
+scanners:
+  # Default local scanners (Checkov and Trivy) are auto-detected and run automatically
+  # when installed. No configuration needed for basic usage.
+  
+  # To disable default scanners, add them to the disabled list:
+  # disabled:
+  #   - checkov
+  #   - trivy
+  
+  # To enable cloud-based scanners, add them to the enabled list:
+  # enabled:
+  #   - aikido
+  
+  # Cloud scanner configuration (Aikido example):
+  # aikido:
+  #   api_key_env: "AIKIDO_API_KEY"

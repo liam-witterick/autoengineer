@@ -1,0 +1,34 @@
+# .github/autoengineer-ignore.yaml
+# Configuration file for ignoring specific findings in AutoEngineer
+
+# Accepted risks - findings we've reviewed and accepted
+accepted:
+  - id: "SEC-a1b2c3d4"
+    reason: "Legacy system, scheduled for decommission Q2"
+    accepted_by: "security-team"
+    accepted_date: "2025-01-15"
+  - id: "INFRA-x9y8z7w6"
+    reason: "Intentional for dev environment"
+    accepted_by: "platform-team"
+    accepted_date: "2025-01-10"
+
+# Paths to ignore completely (glob patterns supported)
+ignore_paths:
+  - "examples/*"
+  - "test/fixtures/*"
+  - "docs/*"
+  - "**/testdata/**"
+  - "**/*.example.*"
+
+# Patterns to ignore (matched against finding titles, case-insensitive)
+ignore_patterns:
+  - "*sandbox*"
+  - "*example*"
+  - "*demo*"
+  - "*test*"
+
+# Disable specific scopes entirely
+disabled_scopes:
+  - pipeline  # e.g., if you don't use GitHub Actions
+  # - security
+  # - infra

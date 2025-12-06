@@ -1,0 +1,19 @@
+# Go build artifacts
+go/autoengineer
+go/dist/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+*.out
+go/coverage.txt
+
+# Vendor
+go/vendor/
+
+# Findings output
+findings.json
