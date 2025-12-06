@@ -12,6 +12,7 @@ import (
 	"github.com/liam-witterick/autoengineer/go/internal/config"
 	"github.com/liam-witterick/autoengineer/go/internal/copilot"
 	"github.com/liam-witterick/autoengineer/go/internal/findings"
+	"github.com/liam-witterick/autoengineer/go/internal/interactive"
 	"github.com/liam-witterick/autoengineer/go/internal/issues"
 	"github.com/liam-witterick/autoengineer/go/internal/progress"
 	"github.com/liam-witterick/autoengineer/go/internal/scanner"
@@ -186,11 +187,23 @@ func run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Interactive mode (simplified for now)
-	fmt.Println("\n💡 Findings saved to", flagOutput)
-	fmt.Println("   Use --create-issues flag to automatically create GitHub issues")
+	// Interactive mode
+	owner, repo, err := getRepoInfo()
+	if err != nil {
+		return fmt.Errorf("failed to get repo info: %w", err)
+	}
 
-	return nil
+	label := os.Getenv("AUTOENGINEER_LABEL")
+	if label == "" {
+		label = "autoengineer"
+	}
+
+	session, err := interactive.NewSession(filtered, owner, repo, label)
+	if err != nil {
+		return fmt.Errorf("failed to create interactive session: %w", err)
+	}
+
+	return session.Run(ctx)
 }
 
 func checkDependencies() error {
@@ -543,24 +556,7 @@ func displayPreview(allFindings []findings.Finding, ignoredCount int) {
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println()
 
-	high, medium, low := findings.CountBySeverity(allFindings)
-	security, pipeline, infra := findings.CountByCategory(allFindings)
-	total := len(allFindings)
-
-	fmt.Printf("Summary: 🔴 High: %d  🟡 Medium: %d  🟢 Low: %d  (Total: %d)\n", high, medium, low, total)
-
-	if security+pipeline+infra > 0 {
-		fmt.Println()
-		if security > 0 {
-			fmt.Printf("🔒 Security:       %d finding(s)\n", security)
-		}
-		if pipeline > 0 {
-			fmt.Printf("⚙️  Pipeline:       %d finding(s)\n", pipeline)
-		}
-		if infra > 0 {
-			fmt.Printf("🏗️  Infrastructure: %d finding(s)\n", infra)
-		}
-	}
+	findings.DisplaySummary(allFindings)
 
 	if ignoredCount > 0 {
 		fmt.Printf("\n⏭️  Ignored:        %d finding(s) (based on ignore config)\n", ignoredCount)
@@ -568,31 +564,7 @@ func displayPreview(allFindings []findings.Finding, ignoredCount int) {
 
 	fmt.Println()
 
-	// Show first few findings
-	maxDisplay := 5
-	if len(allFindings) < maxDisplay {
-		maxDisplay = len(allFindings)
-	}
-
-	for i := 0; i < maxDisplay; i++ {
-		f := allFindings[i]
-		emoji := "⚪"
-		switch f.Severity {
-		case findings.SeverityHigh:
-			emoji = "🔴"
-		case findings.SeverityMedium:
-			emoji = "🟡"
-		case findings.SeverityLow:
-			emoji = "🟢"
-		}
-
-		fmt.Printf("%d. %s %s [%s]\n", i+1, emoji, f.Title, f.ID)
-		fmt.Printf("   Files: %s\n", strings.Join(f.Files, ", "))
-	}
-
-	if len(allFindings) > maxDisplay {
-		fmt.Printf("\n... and %d more finding(s)\n", len(allFindings)-maxDisplay)
-	}
+	findings.DisplayFindings(allFindings, findings.DefaultDisplayOptions())
 }
 
 func createIssuesAuto(ctx context.Context, allFindings []findings.Finding) ([]int, error) {
