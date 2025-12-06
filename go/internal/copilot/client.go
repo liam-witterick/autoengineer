@@ -81,11 +81,18 @@ func (c *Client) RunDelegate(ctx context.Context, prompt string) error {
 	delegatePrompt := "/delegate " + prompt
 	cmd := exec.CommandContext(ctx, c.BinaryPath, "-i", delegatePrompt)
 	
-	cmd.Stdin = nil
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-
-	return cmd.Run()
+	// Run in background - capture output for error reporting
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	
+	if err := cmd.Run(); err != nil {
+		if stderr.Len() > 0 {
+			return fmt.Errorf("delegation failed: %w (stderr: %s)", err, stderr.String())
+		}
+		return err
+	}
+	
+	return nil
 }
 
 // extractJSON extracts JSON content from markdown code blocks

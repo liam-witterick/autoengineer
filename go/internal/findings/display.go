@@ -1,6 +1,9 @@
 package findings
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // DisplayOptions controls how findings are displayed
 type DisplayOptions struct {
@@ -107,12 +110,5 @@ func SeverityEmoji(severity string) string {
 
 // joinFiles joins file paths with commas
 func joinFiles(files []string) string {
-	if len(files) == 0 {
-		return ""
-	}
-	result := files[0]
-	for i := 1; i < len(files); i++ {
-		result += ", " + files[i]
-	}
-	return result
+	return strings.Join(files, ", ")
 }
