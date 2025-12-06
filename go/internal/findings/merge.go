@@ -36,12 +36,12 @@ var stopWords = map[string]bool{
 }
 
 // Merge combines multiple finding arrays and deduplicates them
-// If a deduplicator is provided via context, it will be used; otherwise falls back to local grouping
 func Merge(findingArrays ...[]Finding) []Finding {
 	return MergeWithContext(context.Background(), nil, findingArrays...)
 }
 
-// MergeWithContext combines multiple finding arrays and deduplicates them using the provided deduplicator
+// MergeWithContext combines multiple finding arrays and deduplicates them.
+// If a deduplicator is provided, it will be used; otherwise falls back to local grouping.
 func MergeWithContext(ctx context.Context, deduplicator Deduplicator, findingArrays ...[]Finding) []Finding {
 	// Combine all findings
 	var all []Finding
