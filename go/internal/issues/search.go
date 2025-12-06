@@ -3,6 +3,7 @@ package issues
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -31,6 +32,7 @@ func extractLabelNames(labels []labelStruct) []string {
 // FindByID searches for an issue by check ID in the body
 func (c *Client) FindByID(ctx context.Context, checkID string) (*SearchResult, error) {
 	query := fmt.Sprintf("%s in:body repo:%s/%s state:open label:%s", checkID, c.owner, c.repo, c.label)
+	encodedQuery := url.QueryEscape(query)
 	
 	var result struct {
 		Items []struct {
@@ -41,7 +43,7 @@ func (c *Client) FindByID(ctx context.Context, checkID string) (*SearchResult, e
 		} `json:"items"`
 	}
 
-	err := c.apiClient.Get(fmt.Sprintf("search/issues?q=%s", query), &result)
+	err := c.apiClient.Get(fmt.Sprintf("search/issues?q=%s", encodedQuery), &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search for issue: %w", err)
 	}
@@ -75,6 +77,7 @@ func (c *Client) FindByTitle(ctx context.Context, title string) (*SearchResult, 
 	}, searchTitle)
 
 	query := fmt.Sprintf("\"%s\" in:title repo:%s/%s state:open", searchTitle, c.owner, c.repo)
+	encodedQuery := url.QueryEscape(query)
 	
 	var result struct {
 		Items []struct {
@@ -85,7 +88,7 @@ func (c *Client) FindByTitle(ctx context.Context, title string) (*SearchResult, 
 		} `json:"items"`
 	}
 
-	err := c.apiClient.Get(fmt.Sprintf("search/issues?q=%s", query), &result)
+	err := c.apiClient.Get(fmt.Sprintf("search/issues?q=%s", encodedQuery), &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search for issue: %w", err)
 	}
@@ -156,6 +159,7 @@ func (c *Client) HasDelegatedLabel(ctx context.Context, issueNumber int) (bool, 
 // ListOpenIssues returns all open issues with the autoengineer label
 func (c *Client) ListOpenIssues(ctx context.Context) ([]SearchResult, error) {
 	query := fmt.Sprintf("repo:%s/%s state:open label:%s", c.owner, c.repo, c.label)
+	encodedQuery := url.QueryEscape(query)
 	
 	var result struct {
 		Items []struct {
@@ -166,7 +170,7 @@ func (c *Client) ListOpenIssues(ctx context.Context) ([]SearchResult, error) {
 		} `json:"items"`
 	}
 
-	err := c.apiClient.Get(fmt.Sprintf("search/issues?q=%s", query), &result)
+	err := c.apiClient.Get(fmt.Sprintf("search/issues?q=%s", encodedQuery), &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search for issues: %w", err)
 	}

@@ -114,7 +114,7 @@ func (s *InteractiveSession) handleFix(ctx context.Context) error {
 		if item.IsExisting {
 			fmt.Printf("%d. [TRACKED] %s (Issue #%d)\n", i+1, item.IssueTitle, *item.IssueNum)
 		} else {
-			emoji := severityEmoji(item.Finding.Severity)
+			emoji := findings.SeverityEmoji(item.Finding.Severity)
 			fmt.Printf("%d. %s [NEW] %s\n", i+1, emoji, item.Finding.Title)
 		}
 	}
@@ -229,43 +229,9 @@ func (s *InteractiveSession) handlePreview() {
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println()
 	
-	high, medium, low := findings.CountBySeverity(s.findings)
-	security, pipeline, infra := findings.CountByCategory(s.findings)
-	total := len(s.findings)
-	
-	fmt.Printf("Summary: 🔴 High: %d  🟡 Medium: %d  🟢 Low: %d  (Total: %d)\n", high, medium, low, total)
-	
-	if security+pipeline+infra > 0 {
-		fmt.Println()
-		if security > 0 {
-			fmt.Printf("🔒 Security:       %d finding(s)\n", security)
-		}
-		if pipeline > 0 {
-			fmt.Printf("⚙️  Pipeline:       %d finding(s)\n", pipeline)
-		}
-		if infra > 0 {
-			fmt.Printf("🏗️  Infrastructure: %d finding(s)\n", infra)
-		}
-	}
-	
+	findings.DisplaySummary(s.findings)
 	fmt.Println()
-	
-	// Show all findings
-	for i, f := range s.findings {
-		emoji := severityEmoji(f.Severity)
-		fmt.Printf("%d. %s %s [%s]\n", i+1, emoji, f.Title, f.ID)
-		fmt.Printf("   Category: %s\n", f.Category)
-		fmt.Printf("   Files: %s\n", strings.Join(f.Files, ", "))
-		if f.Description != "" {
-			// Truncate long descriptions
-			desc := f.Description
-			if len(desc) > 150 {
-				desc = desc[:150] + "..."
-			}
-			fmt.Printf("   Description: %s\n", desc)
-		}
-		fmt.Println()
-	}
+	findings.DisplayFindings(s.findings, findings.DetailedDisplayOptions())
 }
 
 // getTrackedIssues fetches existing open issues with the autoengineer label
@@ -455,18 +421,4 @@ func (s *InteractiveSession) delegateIssues(ctx context.Context, issueNums []int
 	fmt.Printf("📊 Delegated %d issue(s) to Copilot coding agent\n", len(issueNums))
 	
 	return nil
-}
-
-// severityEmoji returns the emoji for a severity level
-func severityEmoji(severity string) string {
-	switch severity {
-	case findings.SeverityHigh:
-		return "🔴"
-	case findings.SeverityMedium:
-		return "🟡"
-	case findings.SeverityLow:
-		return "🟢"
-	default:
-		return "⚪"
-	}
 }

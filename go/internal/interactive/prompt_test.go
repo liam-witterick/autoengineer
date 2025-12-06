@@ -157,9 +157,9 @@ func TestSeverityEmoji(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := severityEmoji(tt.severity)
+			got := findings.SeverityEmoji(tt.severity)
 			if got != tt.want {
-				t.Errorf("severityEmoji() = %v, want %v", got, tt.want)
+				t.Errorf("findings.SeverityEmoji() = %v, want %v", got, tt.want)
 			}
 		})
 	}
