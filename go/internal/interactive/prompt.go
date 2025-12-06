@@ -270,10 +270,22 @@ func (s *InteractiveSession) handlePreview() {
 
 // getTrackedIssues fetches existing open issues with the autoengineer label
 func (s *InteractiveSession) getTrackedIssues(ctx context.Context) ([]ActionableItem, error) {
-	// Use gh CLI to search for open issues with the label
-	// We'll use the search API through the issues client
-	// For now, return empty slice - this would require adding a search method to the issues client
-	return []ActionableItem{}, nil
+	results, err := s.issuesClient.ListOpenIssues(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]ActionableItem, len(results))
+	for i, result := range results {
+		issueNum := result.Number
+		items[i] = ActionableItem{
+			IssueNum:   &issueNum,
+			IssueTitle: result.Title,
+			IsExisting: true,
+		}
+	}
+
+	return items, nil
 }
 
 // convertFindingsToItems converts findings to actionable items

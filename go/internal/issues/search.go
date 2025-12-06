@@ -152,3 +152,34 @@ func (c *Client) HasDelegatedLabel(ctx context.Context, issueNumber int) (bool, 
 
 	return false, nil
 }
+
+// ListOpenIssues returns all open issues with the autoengineer label
+func (c *Client) ListOpenIssues(ctx context.Context) ([]SearchResult, error) {
+	query := fmt.Sprintf("repo:%s/%s state:open label:%s", c.owner, c.repo, c.label)
+	
+	var result struct {
+		Items []struct {
+			Number int           `json:"number"`
+			Title  string        `json:"title"`
+			Body   string        `json:"body"`
+			Labels []labelStruct `json:"labels"`
+		} `json:"items"`
+	}
+
+	err := c.apiClient.Get(fmt.Sprintf("search/issues?q=%s", query), &result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search for issues: %w", err)
+	}
+
+	issues := make([]SearchResult, len(result.Items))
+	for i, item := range result.Items {
+		issues[i] = SearchResult{
+			Number: item.Number,
+			Title:  item.Title,
+			Body:   item.Body,
+			Labels: extractLabelNames(item.Labels),
+		}
+	}
+
+	return issues, nil
+}
