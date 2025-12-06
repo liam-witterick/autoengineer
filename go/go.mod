@@ -1,4 +1,4 @@
-module github.com/liam-witterick/infra-review/go
+module github.com/liam-witterick/autoengineer/go
 
 go 1.25.0
 

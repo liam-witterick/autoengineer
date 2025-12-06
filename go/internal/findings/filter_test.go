@@ -3,7 +3,7 @@ package findings
 import (
 	"testing"
 
-	"github.com/liam-witterick/infra-review/go/internal/config"
+	"github.com/liam-witterick/autoengineer/go/internal/config"
 )
 
 func TestFilter(t *testing.T) {

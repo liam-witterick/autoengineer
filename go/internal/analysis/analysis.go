@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/liam-witterick/infra-review/go/internal/copilot"
-	"github.com/liam-witterick/infra-review/go/internal/findings"
+	"github.com/liam-witterick/autoengineer/go/internal/copilot"
+	"github.com/liam-witterick/autoengineer/go/internal/findings"
 )
 
 // Analyzer defines the interface for running scoped analyses

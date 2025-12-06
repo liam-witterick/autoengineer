@@ -2,7 +2,7 @@
 
 # Build variables
 BINARY_NAME=autoengineer
-VERSION=2.0.0
+VERSION=1.0.0
 BUILD_DIR=dist
 GO_CMD=go
 GO_BUILD=$(GO_CMD) build

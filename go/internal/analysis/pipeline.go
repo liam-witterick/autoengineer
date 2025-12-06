@@ -3,7 +3,7 @@ package analysis
 import (
 	"context"
 
-	"github.com/liam-witterick/infra-review/go/internal/findings"
+	"github.com/liam-witterick/autoengineer/go/internal/findings"
 )
 
 // PipelineAnalyzer performs CI/CD pipeline-focused analysis

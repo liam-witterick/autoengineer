@@ -173,10 +173,10 @@ Summary: 🔴 High: 3  🟡 Medium: 15  🟢 Low: 7  (Total: 25)
 
 ```bash
 # Linux/macOS
-curl -fsSL https://raw.githubusercontent.com/liam-witterick/infra-review/master/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/liam-witterick/autoengineer/master/install.sh | bash
 
 # Or download from releases
-# https://github.com/liam-witterick/infra-review/releases
+# https://github.com/liam-witterick/autoengineer/releases
 ```
 
 ### Requirements
@@ -282,7 +282,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install AutoEngineer
-        run: curl -fsSL https://raw.githubusercontent.com/liam-witterick/infra-review/master/install.sh | bash
+        run: curl -fsSL https://raw.githubusercontent.com/liam-witterick/autoengineer/master/install.sh | bash
 
       - name: Run AutoEngineer
         run: autoengineer --create-issues --min-severity medium

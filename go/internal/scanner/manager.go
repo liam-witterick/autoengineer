@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/liam-witterick/infra-review/go/internal/config"
-	"github.com/liam-witterick/infra-review/go/internal/findings"
+	"github.com/liam-witterick/autoengineer/go/internal/config"
+	"github.com/liam-witterick/autoengineer/go/internal/findings"
 )
 
 // Manager manages scanner execution and coordination

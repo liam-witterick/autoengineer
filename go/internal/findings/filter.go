@@ -3,7 +3,7 @@ package findings
 import (
 	"strings"
 
-	"github.com/liam-witterick/infra-review/go/internal/config"
+	"github.com/liam-witterick/autoengineer/go/internal/config"
 )
 
 // Filter filters findings based on ignore configuration

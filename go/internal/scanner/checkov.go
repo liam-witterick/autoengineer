@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/liam-witterick/infra-review/go/internal/analysis"
-	"github.com/liam-witterick/infra-review/go/internal/findings"
+	"github.com/liam-witterick/autoengineer/go/internal/analysis"
+	"github.com/liam-witterick/autoengineer/go/internal/findings"
 )
 
 // CheckovScanner implements Scanner for Checkov

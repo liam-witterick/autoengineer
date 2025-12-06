@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/liam-witterick/infra-review/go/internal/config"
+	"github.com/liam-witterick/autoengineer/go/internal/config"
 )
 
 func TestCheckovScanner(t *testing.T) {

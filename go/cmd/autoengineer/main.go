@@ -8,17 +8,17 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/liam-witterick/infra-review/go/internal/analysis"
-	"github.com/liam-witterick/infra-review/go/internal/config"
-	"github.com/liam-witterick/infra-review/go/internal/copilot"
-	"github.com/liam-witterick/infra-review/go/internal/findings"
-	"github.com/liam-witterick/infra-review/go/internal/issues"
-	"github.com/liam-witterick/infra-review/go/internal/scanner"
+	"github.com/liam-witterick/autoengineer/go/internal/analysis"
+	"github.com/liam-witterick/autoengineer/go/internal/config"
+	"github.com/liam-witterick/autoengineer/go/internal/copilot"
+	"github.com/liam-witterick/autoengineer/go/internal/findings"
+	"github.com/liam-witterick/autoengineer/go/internal/issues"
+	"github.com/liam-witterick/autoengineer/go/internal/scanner"
 	"github.com/spf13/cobra"
 )
 
 const (
-	version = "2.0.0"
+	version = "1.0.0"
 )
 
 var (
@@ -123,15 +123,15 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Run analysis
 	fmt.Println("\n🔍 Running analysis...")
-	
+
 	// Determine if scanners should run
 	skipScanners := flagNoScanners || flagFast
-	
+
 	allFindings, scannerStatuses, err := runAnalysisWithScanners(ctx, flagScope, cfg, scannerCfg, skipScanners)
 	if err != nil {
 		return fmt.Errorf("analysis failed: %w", err)
 	}
-	
+
 	// Display scanner summary
 	if !skipScanners && len(scannerStatuses) > 0 {
 		displayScannerSummary(scannerStatuses)
@@ -139,7 +139,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Filter findings by ignore config
 	filtered, ignoredCount := findings.Filter(allFindings, cfg)
-	
+
 	if ignoredCount > 0 {
 		fmt.Printf("   Ignored %d finding(s) based on config\n", ignoredCount)
 	}
@@ -227,17 +227,17 @@ func checkDependencies() error {
 	// Check scanners
 	fmt.Println()
 	fmt.Println("🔍 External Scanners:")
-	
+
 	// Load scanner config
 	scannerCfg, err := config.LoadScannerConfig()
 	if err != nil {
 		fmt.Printf("   ⚠️  Warning: failed to load scanner config: %v\n", err)
 		scannerCfg = &config.ScannerConfig{}
 	}
-	
+
 	mgr := scanner.NewManager(scannerCfg)
 	statuses := mgr.DetectScanners()
-	
+
 	for _, status := range statuses {
 		if status.Installed {
 			fmt.Printf("   ✅ %s (%s)\n", status.Name, status.Version)
@@ -399,40 +399,40 @@ func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.Igno
 		statuses []scanner.ScannerStatus
 		err      error
 	}
-	
+
 	// Run Copilot analysis and scanners in parallel
 	copilotCh := make(chan result, 1)
 	scannerCh := make(chan result, 1)
-	
+
 	// Run Copilot analysis
 	go func() {
 		copilotFindings, err := runAnalysis(ctx, scope, cfg)
 		copilotCh <- result{findings: copilotFindings, err: err}
 	}()
-	
+
 	// Run scanners if not skipped
 	go func() {
 		if skipScanners {
 			scannerCh <- result{findings: []findings.Finding{}, statuses: []scanner.ScannerStatus{}}
 			return
 		}
-		
+
 		mgr := scanner.NewManager(scannerCfg)
 		scannerFindings, statuses := mgr.RunAll(ctx, scope)
 		scannerCh <- result{findings: scannerFindings, statuses: statuses}
 	}()
-	
+
 	// Collect results
 	copilotResult := <-copilotCh
 	scannerResult := <-scannerCh
-	
+
 	if copilotResult.err != nil {
 		return nil, nil, copilotResult.err
 	}
-	
+
 	// Merge findings from all sources and deduplicate
 	allFindings := findings.Merge(copilotResult.findings, scannerResult.findings)
-	
+
 	return allFindings, scannerResult.statuses, nil
 }
 
@@ -440,7 +440,7 @@ func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.Igno
 func displayScannerSummary(statuses []scanner.ScannerStatus) {
 	fmt.Println()
 	fmt.Println("📊 Scanner Summary:")
-	
+
 	for _, status := range statuses {
 		if status.Ran {
 			if status.Found > 0 {
@@ -628,19 +628,19 @@ func delegateIssues(ctx context.Context, issueNums []int) error {
 		}
 
 		fmt.Printf("🔧 Delegating issue #%d...\n", issueNum)
-		
+
 		// Add delegated label
 		if err := issuesClient.AddDelegatedLabel(ctx, issueNum); err != nil {
 			fmt.Printf("   ⚠️  Warning: failed to add delegated label to issue #%d: %v\n", issueNum, err)
 		}
 
 		prompt := fmt.Sprintf("Fix the issue described in %s/%s#%d", owner, repo, issueNum)
-		
+
 		if err := client.RunDelegate(ctx, prompt); err != nil {
 			fmt.Printf("   ⚠️  Warning: delegation failed for issue #%d: %v\n", issueNum, err)
 			continue
 		}
-		
+
 		fmt.Printf("   ✅ Delegated issue #%d\n", issueNum)
 	}
 
@@ -659,17 +659,17 @@ func getRepoInfo() (owner, repo string, err error) {
 	}
 
 	url := strings.TrimSpace(string(output))
-	
+
 	// Parse git@github.com:owner/repo.git or https://github.com/owner/repo.git
 	if strings.HasPrefix(url, "git@github.com:") {
 		url = strings.TrimPrefix(url, "git@github.com:")
 	} else if strings.HasPrefix(url, "https://github.com/") {
 		url = strings.TrimPrefix(url, "https://github.com/")
 	}
-	
+
 	url = strings.TrimSuffix(url, ".git")
 	parts := strings.Split(url, "/")
-	
+
 	if len(parts) != 2 {
 		return "", "", fmt.Errorf("invalid git remote URL")
 	}

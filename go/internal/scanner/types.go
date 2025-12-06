@@ -3,7 +3,7 @@ package scanner
 import (
 	"context"
 
-	"github.com/liam-witterick/infra-review/go/internal/findings"
+	"github.com/liam-witterick/autoengineer/go/internal/findings"
 )
 
 // Scanner defines the interface for external security scanners

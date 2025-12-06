@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/liam-witterick/infra-review/go/internal/findings"
+	"github.com/liam-witterick/autoengineer/go/internal/findings"
 )
 
 // Client wraps interactions with the GitHub Copilot CLI
