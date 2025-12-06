@@ -1,9 +1,15 @@
 package findings
 
 import (
+	"context"
 	"sort"
 	"strings"
 )
+
+// Deduplicator is an interface for deduplication strategies
+type Deduplicator interface {
+	Deduplicate(ctx context.Context, findings []Finding) ([]Finding, error)
+}
 
 // Grouping and similarity thresholds
 const (
@@ -30,15 +36,34 @@ var stopWords = map[string]bool{
 }
 
 // Merge combines multiple finding arrays and deduplicates them
+// If a deduplicator is provided via context, it will be used; otherwise falls back to local grouping
 func Merge(findingArrays ...[]Finding) []Finding {
+	return MergeWithContext(context.Background(), nil, findingArrays...)
+}
+
+// MergeWithContext combines multiple finding arrays and deduplicates them using the provided deduplicator
+func MergeWithContext(ctx context.Context, deduplicator Deduplicator, findingArrays ...[]Finding) []Finding {
 	// Combine all findings
 	var all []Finding
 	for _, findings := range findingArrays {
 		all = append(all, findings...)
 	}
 
-	// Group and merge related findings
-	merged := groupAndMerge(all)
+	var merged []Finding
+	
+	// Try AI-based deduplication first if available
+	if deduplicator != nil {
+		deduplicated, err := deduplicator.Deduplicate(ctx, all)
+		if err == nil && len(deduplicated) > 0 {
+			merged = deduplicated
+		} else {
+			// Fallback to local grouping if AI fails
+			merged = groupAndMerge(all)
+		}
+	} else {
+		// Use local grouping
+		merged = groupAndMerge(all)
+	}
 
 	// Sort by severity
 	sort.Sort(BySeverity(merged))

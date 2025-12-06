@@ -383,7 +383,9 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig) ([
 			return nil, fmt.Errorf("infrastructure analysis failed: %w", infraResult.err)
 		}
 
-		allFindings = findings.Merge(secResult.findings, pipeResult.findings, infraResult.findings)
+		// Merge findings from all scopes and deduplicate using Copilot AI
+		client := copilot.NewClient()
+		allFindings = findings.MergeWithContext(ctx, client, secResult.findings, pipeResult.findings, infraResult.findings)
 
 	default:
 		return nil, fmt.Errorf("invalid scope: %s (must be security|pipeline|infra|all)", scope)
@@ -430,8 +432,9 @@ func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.Igno
 		return nil, nil, copilotResult.err
 	}
 
-	// Merge findings from all sources and deduplicate
-	allFindings := findings.Merge(copilotResult.findings, scannerResult.findings)
+	// Merge findings from all sources and deduplicate using Copilot AI
+	client := copilot.NewClient()
+	allFindings := findings.MergeWithContext(ctx, client, copilotResult.findings, scannerResult.findings)
 
 	return allFindings, scannerResult.statuses, nil
 }
