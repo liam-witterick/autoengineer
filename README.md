@@ -33,12 +33,14 @@ AutoEngineer lets Copilot find its own work:
      ↓
 🔧 FIX       →  Copilot CLI (local) or Coding Agent (cloud) resolves them
      ↓
-🔗 CLOSE     →  PRs link to issues, merged, done
+👀 REVIEW    →  You review and merge the PR
+     ↓
+🔗 CLOSE     →  Issue closed, changes merged
      ↓
      └──────────────── repeat ────────────────┘
 ```
 
-**Work that would never have been created now exists — and gets resolved.**
+**Work that would never have been created now exists — and gets resolved.** AutoEngineer automates discovery and fix delegation, but you stay in control by reviewing and merging PRs.
 
 ---
 
@@ -205,6 +207,7 @@ autoengineer --scope pipeline
 autoengineer --scope infra
 
 # Full automation — find issues, create tickets, delegate fixes
+# (PRs are created automatically, you review and merge them)
 autoengineer --create-issues --delegate
 ```
 
@@ -252,43 +255,20 @@ Action: [f]ix, [l]ater, [p]review, [q]uit:
 
 **Delegation Protection:** Issues are automatically labeled as `delegated` to prevent double-delegation.
 
-### Automated Mode (CI/CD)
+### Automated Mode
 
 ```bash
 # Create issues for all findings
 autoengineer --create-issues
 
-# Create issues AND delegate fixes to Copilot
+# Create issues AND delegate fixes to Copilot (creates PRs for you to review)
 autoengineer --create-issues --delegate
 
 # Only action high-severity findings
 autoengineer --create-issues --delegate --min-severity high
 ```
 
-### GitHub Actions Integration
-
-```yaml
-name: AutoEngineer
-
-on:
-  schedule:
-    - cron: '0 0 * * 1'  # Weekly
-  workflow_dispatch:
-
-jobs:
-  improve:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install AutoEngineer
-        run: curl -fsSL https://raw.githubusercontent.com/liam-witterick/autoengineer/master/install.sh | bash
-
-      - name: Run AutoEngineer
-        run: autoengineer --create-issues --min-severity medium
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
+**Note:** When using `--delegate`, AutoEngineer creates PRs automatically, but you still need to review and merge them. Nothing changes in your repository without your approval.
 
 ---
 
@@ -350,7 +330,7 @@ ignore_patterns:
 ## FAQ
 
 **Does this modify my code?**
-No. AutoEngineer only creates issues and delegates to Copilot. You control what gets merged.
+No. AutoEngineer creates issues and can delegate fixes to Copilot, which creates PRs. However, nothing changes in your repository without your explicit review and approval — you must review and merge all PRs yourself.
 
 **What if I disagree with a finding?**
 Close the issue, or add it to your ignore config. AutoEngineer won't flag it again.
