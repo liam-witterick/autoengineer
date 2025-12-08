@@ -112,12 +112,18 @@ func (c *Client) AddDelegatedLabel(ctx context.Context, issueNumber int) error {
 	return nil
 }
 
-// AssignCopilot assigns the Copilot coding agent to an issue
+// AssignCopilot assigns the Copilot coding agent to an issue.
+// Assigning 'copilot' as an assignee is the mechanism that triggers GitHub Copilot's
+// coding agent to work on the issue and create a PR with fixes.
 func (c *Client) AssignCopilot(ctx context.Context, issueNumber int) error {
 	// Use GitHub API to add "copilot" as an assignee
 	// POST /repos/{owner}/{repo}/issues/{issue_number}/assignees
-	assigneeData := map[string]interface{}{
-		"assignees": []string{"copilot"},
+	type assigneeRequest struct {
+		Assignees []string `json:"assignees"`
+	}
+
+	assigneeData := assigneeRequest{
+		Assignees: []string{"copilot"},
 	}
 
 	body, err := json.Marshal(assigneeData)
