@@ -280,8 +280,9 @@ func mergeFindings(a, b Finding) Finding {
 	// Merge descriptions if different and both non-empty
 	mergedDesc := base.Description
 	if other.Description != "" && other.Description != base.Description {
-		// Append additional context if descriptions differ
-		if !strings.Contains(base.Description, other.Description) {
+		// Append additional context if descriptions differ and aren't already contained
+		// Only skip if the other description is substantial (>20 chars) and fully contained
+		if !(len(other.Description) > 20 && strings.Contains(base.Description, other.Description)) {
 			mergedDesc = base.Description + "; " + other.Description
 		}
 	}
@@ -289,7 +290,8 @@ func mergeFindings(a, b Finding) Finding {
 	// Merge recommendations similarly
 	mergedRec := base.Recommendation
 	if other.Recommendation != "" && other.Recommendation != base.Recommendation {
-		if !strings.Contains(base.Recommendation, other.Recommendation) {
+		// Only skip if the other recommendation is substantial (>20 chars) and fully contained
+		if !(len(other.Recommendation) > 20 && strings.Contains(base.Recommendation, other.Recommendation)) {
 			mergedRec = base.Recommendation + "; " + other.Recommendation
 		}
 	}
