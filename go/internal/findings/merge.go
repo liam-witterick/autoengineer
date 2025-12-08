@@ -170,11 +170,17 @@ func normalizeTokens(tokens []string) []string {
 
 // normalizeToken applies basic normalization rules
 func normalizeToken(token string) string {
+	// Only apply stemming to words longer than 5 characters to avoid over-stemming
+	if len(token) <= 5 {
+		return token
+	}
+	
 	// Common suffixes to remove (simple stemming)
-	suffixes := []string{"ing", "ed", "s", "es"}
+	// Only remove if the resulting word is still meaningful (length > 3)
+	suffixes := []string{"ing", "ed", "es", "s"}
 	
 	for _, suffix := range suffixes {
-		if len(token) > len(suffix)+2 && strings.HasSuffix(token, suffix) {
+		if len(token) > len(suffix)+3 && strings.HasSuffix(token, suffix) {
 			return token[:len(token)-len(suffix)]
 		}
 	}
@@ -276,7 +282,7 @@ func mergeFindings(a, b Finding) Finding {
 	if other.Description != "" && other.Description != base.Description {
 		// Append additional context if descriptions differ
 		if !strings.Contains(base.Description, other.Description) {
-			mergedDesc = base.Description + " " + other.Description
+			mergedDesc = base.Description + "; " + other.Description
 		}
 	}
 
@@ -284,7 +290,7 @@ func mergeFindings(a, b Finding) Finding {
 	mergedRec := base.Recommendation
 	if other.Recommendation != "" && other.Recommendation != base.Recommendation {
 		if !strings.Contains(base.Recommendation, other.Recommendation) {
-			mergedRec = base.Recommendation + " " + other.Recommendation
+			mergedRec = base.Recommendation + "; " + other.Recommendation
 		}
 	}
 
