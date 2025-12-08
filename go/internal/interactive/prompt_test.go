@@ -185,9 +185,10 @@ func TestHandlePreview(t *testing.T) {
 		},
 	}
 
-	// Note: We can't fully test handlePreview without a mock issuesClient
+	// Note: Full integration testing of handlePreview would require a mock issuesClient
 	// since it now calls getAllItems which requires getTrackedIssues.
-	// This test just ensures convertFindingsToItems works correctly.
+	// TODO: Consider adding dependency injection for issuesClient to enable more comprehensive testing.
+	// For now, we test the core conversion logic that handlePreview depends on.
 	session := &InteractiveSession{
 		findings: findings,
 	}
