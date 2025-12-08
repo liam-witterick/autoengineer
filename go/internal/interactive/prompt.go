@@ -464,7 +464,7 @@ func (s *InteractiveSession) fixLocal(ctx context.Context, items []ActionableIte
 		}
 
 		fmt.Println()
-		fmt.Printf("Running: gh copilot suggest...\n")
+		fmt.Printf("Running: copilot -i...\n")
 		fmt.Println()
 
 		if err := s.copilotClient.RunFix(ctx, prompt); err != nil {
