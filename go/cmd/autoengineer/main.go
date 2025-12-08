@@ -24,17 +24,19 @@ const (
 )
 
 var (
-	flagAuto         bool
-	flagCreateIssues bool
-	flagDelegate     bool
-	flagMinSeverity  string
-	flagOutput       string
-	flagForce        bool
-	flagScope        string
-	flagCheck        bool
-	flagVersion      bool
-	flagNoScanners   bool
-	flagFast         bool
+	flagAuto             bool
+	flagCreateIssues     bool
+	flagDelegate         bool
+	flagMinSeverity      string
+	flagOutput           string
+	flagForce            bool
+	flagScope            string
+	flagCheck            bool
+	flagVersion          bool
+	flagNoScanners       bool
+	flagFast             bool
+	flagInstructions     string
+	flagInstructionsText string
 )
 
 func main() {
@@ -65,6 +67,8 @@ WORKFLOW:
 	rootCmd.Flags().BoolVar(&flagVersion, "version", false, "Show version")
 	rootCmd.Flags().BoolVar(&flagNoScanners, "no-scanners", false, "Skip external scanner integration")
 	rootCmd.Flags().BoolVar(&flagFast, "fast", false, "Fast mode - skip external scanners (alias for --no-scanners)")
+	rootCmd.Flags().StringVar(&flagInstructions, "instructions", "", "Path to custom instructions file")
+	rootCmd.Flags().StringVar(&flagInstructionsText, "instructions-text", "", "Custom instructions as text")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -117,6 +121,29 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load scanner config: %w", err)
 	}
 
+	// Load custom instructions
+	var extraContext string
+	
+	// Priority order: --instructions-text > --instructions > .github/copilot-instructions.md
+	if flagInstructionsText != "" {
+		// Use inline instructions text
+		extraContext = config.FormatInstructions(flagInstructionsText)
+	} else if flagInstructions != "" {
+		// Use custom instructions file
+		instructions, err := config.LoadInstructions(flagInstructions)
+		if err != nil {
+			return fmt.Errorf("failed to load instructions from %s: %w", flagInstructions, err)
+		}
+		extraContext = instructions
+	} else {
+		// Try to load default instructions file
+		instructions, err := config.LoadDefaultInstructions()
+		if err != nil {
+			return fmt.Errorf("failed to load default instructions: %w", err)
+		}
+		extraContext = instructions
+	}
+
 	// Check if scope is disabled
 	if flagScope != "all" && cfg.IsScopeDisabled(flagScope) {
 		fmt.Printf("⚠️  Scope '%s' is disabled in ignore config\n", flagScope)
@@ -159,7 +186,7 @@ func run(cmd *cobra.Command, args []string) error {
 	// Determine if scanners should run
 	skipScanners := flagNoScanners || flagFast
 
-	allFindings, scannerStatuses, err := runAnalysisWithScanners(ctx, flagScope, cfg, scannerCfg, skipScanners, existingContext)
+	allFindings, scannerStatuses, err := runAnalysisWithScanners(ctx, flagScope, cfg, scannerCfg, skipScanners, existingContext, extraContext)
 	if err != nil {
 		return fmt.Errorf("analysis failed: %w", err)
 	}
@@ -305,6 +332,15 @@ func checkDependencies() error {
 		}
 	}
 
+	// Check for custom instructions
+	fmt.Println()
+	fmt.Println("🔍 Custom Instructions:")
+	if config.CheckInstructionsExists() {
+		fmt.Println("   ✅ .github/copilot-instructions.md (found)")
+	} else {
+		fmt.Println("   ⏭️  .github/copilot-instructions.md (not found - will be skipped)")
+	}
+
 	fmt.Println()
 
 	if !allOK {
@@ -337,12 +373,13 @@ func isGitRepo() bool {
 	return cmd.Run() == nil
 }
 
-func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tracker *progress.ScopeTracker, existingContext string) ([]findings.Finding, error) {
+func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tracker *progress.ScopeTracker, existingContext string, extraContext string) ([]findings.Finding, error) {
 	client := copilot.NewClient()
 
 	base := analysis.BaseAnalyzer{
 		Client:          client,
 		ExistingContext: existingContext,
+		ExtraContext:    extraContext,
 	}
 
 	var allFindings []findings.Finding
@@ -446,6 +483,7 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tr
 				scopeBase := analysis.BaseAnalyzer{
 					Client:          scopeClient,
 					ExistingContext: existingContext,
+					ExtraContext:    extraContext,
 				}
 
 				var analyzer analysis.Analyzer
@@ -496,7 +534,7 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tr
 }
 
 // runAnalysisWithScanners runs both Copilot analysis and external scanners in parallel
-func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.IgnoreConfig, scannerCfg *config.ScannerConfig, skipScanners bool, existingContext string) ([]findings.Finding, []scanner.ScannerStatus, error) {
+func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.IgnoreConfig, scannerCfg *config.ScannerConfig, skipScanners bool, existingContext string, extraContext string) ([]findings.Finding, []scanner.ScannerStatus, error) {
 	type result struct {
 		findings []findings.Finding
 		statuses []scanner.ScannerStatus
@@ -535,7 +573,7 @@ func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.Igno
 
 	// Run Copilot analysis
 	go func() {
-		copilotFindings, err := runAnalysis(ctx, scope, cfg, tracker, existingContext)
+		copilotFindings, err := runAnalysis(ctx, scope, cfg, tracker, existingContext, extraContext)
 		copilotCh <- result{findings: copilotFindings, err: err}
 	}()
 
