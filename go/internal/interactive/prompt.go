@@ -76,7 +76,9 @@ func (s *InteractiveSession) Run(ctx context.Context) error {
 				fmt.Printf("❌ Error: %v\n", err)
 			}
 		case "p", "preview":
-			s.handlePreview()
+			if err := s.handlePreview(ctx); err != nil {
+				fmt.Printf("❌ Error: %v\n", err)
+			}
 		case "q", "quit":
 			fmt.Println("\n👋 Exiting. Findings saved to findings.json")
 			return nil
@@ -86,8 +88,8 @@ func (s *InteractiveSession) Run(ctx context.Context) error {
 	}
 }
 
-// handleFix handles the [f]ix option
-func (s *InteractiveSession) handleFix(ctx context.Context) error {
+// getAllItems returns the combined list of tracked issues and new findings
+func (s *InteractiveSession) getAllItems(ctx context.Context) ([]ActionableItem, error) {
 	// Get existing tracked issues
 	fmt.Println("\n🔍 Fetching tracked issues...")
 	
@@ -100,24 +102,59 @@ func (s *InteractiveSession) handleFix(ctx context.Context) error {
 	// Combine existing issues and new findings
 	allItems := append(existingIssues, s.convertFindingsToItems()...)
 	
+	return allItems, nil
+}
+
+// displayAllItems displays the combined list of tracked issues and new findings
+func (s *InteractiveSession) displayAllItems(allItems []ActionableItem) {
+	fmt.Println()
+	
+	// Display tracked issues section if any exist
+	trackedCount := 0
+	for _, item := range allItems {
+		if item.IsExisting {
+			trackedCount++
+		}
+	}
+	
+	if trackedCount > 0 {
+		fmt.Println("📋 TRACKED ISSUES")
+		fmt.Println()
+		for i, item := range allItems {
+			if item.IsExisting {
+				fmt.Printf("%d. [#%d] %s\n", i+1, *item.IssueNum, item.IssueTitle)
+			}
+		}
+		fmt.Println()
+	}
+	
+	// Display new findings section
+	if len(allItems) > trackedCount {
+		fmt.Println("📋 NEW FINDINGS")
+		fmt.Println()
+		for i, item := range allItems {
+			if !item.IsExisting {
+				emoji := findings.SeverityEmoji(item.Finding.Severity)
+				fmt.Printf("%d. %s %s [%s]\n", i+1, emoji, item.Finding.Title, item.Finding.ID)
+			}
+		}
+	}
+}
+
+// handleFix handles the [f]ix option
+func (s *InteractiveSession) handleFix(ctx context.Context) error {
+	allItems, err := s.getAllItems(ctx)
+	if err != nil {
+		return err
+	}
+	
 	if len(allItems) == 0 {
 		fmt.Println("✅ No items to fix!")
 		return nil
 	}
 	
 	// Display all items
-	fmt.Println()
-	fmt.Println("📋 Available items to fix:")
-	fmt.Println()
-	
-	for i, item := range allItems {
-		if item.IsExisting {
-			fmt.Printf("%d. [TRACKED] %s (Issue #%d)\n", i+1, item.IssueTitle, *item.IssueNum)
-		} else {
-			emoji := findings.SeverityEmoji(item.Finding.Severity)
-			fmt.Printf("%d. %s [NEW] %s\n", i+1, emoji, item.Finding.Title)
-		}
-	}
+	s.displayAllItems(allItems)
 	
 	// Get user selection
 	fmt.Println()
@@ -174,22 +211,43 @@ func (s *InteractiveSession) handleFix(ctx context.Context) error {
 
 // handleLater creates issues for new findings without fixing them
 func (s *InteractiveSession) handleLater(ctx context.Context) error {
-	if len(s.findings) == 0 {
+	allItems, err := s.getAllItems(ctx)
+	if err != nil {
+		return err
+	}
+	
+	if len(allItems) == 0 {
+		fmt.Println("✅ No items to track!")
+		return nil
+	}
+	
+	// Check if there are any new findings
+	hasNewFindings := false
+	for _, item := range allItems {
+		if !item.IsExisting {
+			hasNewFindings = true
+			break
+		}
+	}
+	
+	if !hasNewFindings {
 		fmt.Println("✅ No new findings to track!")
 		return nil
 	}
 	
-	// Convert findings to items for display
-	allItems := s.convertFindingsToItems()
+	// Display all items (same format as fix)
+	s.displayAllItems(allItems)
 	
-	// Display all items
-	fmt.Println()
-	fmt.Println("📋 Available items to track:")
-	fmt.Println()
-	
-	for i, item := range allItems {
-		emoji := findings.SeverityEmoji(item.Finding.Severity)
-		fmt.Printf("%d. %s [NEW] %s\n", i+1, emoji, item.Finding.Title)
+	// Add note about tracked issues
+	trackedCount := 0
+	for _, item := range allItems {
+		if item.IsExisting {
+			trackedCount++
+		}
+	}
+	if trackedCount > 0 {
+		fmt.Println()
+		fmt.Printf("ℹ️  Note: Tracked issues (1-%d) are already tracked and cannot be selected here.\n", trackedCount)
 	}
 	
 	// Get user selection
@@ -208,12 +266,42 @@ func (s *InteractiveSession) handleLater(ctx context.Context) error {
 	
 	var selectedItems []ActionableItem
 	if strings.ToLower(selection) == "all" {
-		selectedItems = allItems
+		// Only select new findings, not tracked issues
+		for _, item := range allItems {
+			if !item.IsExisting {
+				selectedItems = append(selectedItems, item)
+			}
+		}
 	} else {
 		selectedItems, err = s.parseSelection(selection, allItems)
 		if err != nil {
 			return err
 		}
+		
+		// Validate that no tracked issues were selected
+		var invalidSelections []int
+		var validItems []ActionableItem
+		for _, item := range selectedItems {
+			if item.IsExisting {
+				// Find the item's position in allItems
+				for j, allItem := range allItems {
+					if item.IssueNum != nil && allItem.IssueNum != nil && *item.IssueNum == *allItem.IssueNum {
+						invalidSelections = append(invalidSelections, j+1)
+						break
+					}
+				}
+			} else {
+				validItems = append(validItems, item)
+			}
+		}
+		
+		if len(invalidSelections) > 0 {
+			fmt.Printf("❌ Cannot select tracked issues: %v\n", invalidSelections)
+			fmt.Println("   These issues are already tracked. Please select only new findings.")
+			return nil
+		}
+		
+		selectedItems = validItems
 	}
 	
 	if len(selectedItems) == 0 {
@@ -270,17 +358,29 @@ func (s *InteractiveSession) handleLater(ctx context.Context) error {
 	return nil
 }
 
-// handlePreview redisplays the findings summary
-func (s *InteractiveSession) handlePreview() {
+// handlePreview redisplays the findings summary with consistent numbering
+func (s *InteractiveSession) handlePreview(ctx context.Context) error {
+	allItems, err := s.getAllItems(ctx)
+	if err != nil {
+		return err
+	}
+	
 	fmt.Println()
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("📋 NEW FINDINGS")
+	fmt.Println("📋 PREVIEW")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println()
 	
+	// Display summary
 	findings.DisplaySummary(s.findings)
-	fmt.Println()
-	findings.DisplayFindings(s.findings, findings.DetailedDisplayOptions())
+	
+	// Display all items with consistent numbering
+	if len(allItems) > 0 {
+		fmt.Println()
+		s.displayAllItems(allItems)
+	}
+	
+	return nil
 }
 
 // getTrackedIssues fetches existing open issues with the autoengineer label
