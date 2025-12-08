@@ -441,6 +441,33 @@ func (s *InteractiveSession) parseSelection(selection string, items []Actionable
 	return selected, nil
 }
 
+// buildLocalFixPrompt creates a Copilot prompt for local fixes
+func buildLocalFixPrompt(item ActionableItem) string {
+	var prompt strings.Builder
+
+	prompt.WriteString("You are a developer fixing issues locally in this repository.\n\n")
+
+	if item.IsExisting {
+		prompt.WriteString(fmt.Sprintf("GitHub issue #%d: %s\n", *item.IssueNum, item.IssueTitle))
+		prompt.WriteString("Help address this issue using the local codebase.\n")
+	} else if item.Finding != nil {
+		prompt.WriteString(fmt.Sprintf("Finding [%s]: %s\n", item.Finding.ID, item.Finding.Title))
+		if strings.TrimSpace(item.Finding.Description) != "" {
+			prompt.WriteString(fmt.Sprintf("Description: %s\n", item.Finding.Description))
+		}
+		if strings.TrimSpace(item.Finding.Recommendation) != "" {
+			prompt.WriteString(fmt.Sprintf("Recommendation: %s\n", item.Finding.Recommendation))
+		}
+		if len(item.Finding.Files) > 0 {
+			prompt.WriteString(fmt.Sprintf("Related files: %s\n", strings.Join(item.Finding.Files, ", ")))
+		}
+	}
+
+	prompt.WriteString("Provide a step-by-step plan and apply code changes as needed.\n")
+
+	return prompt.String()
+}
+
 // fixLocal delegates to Copilot CLI for local fixes
 func (s *InteractiveSession) fixLocal(ctx context.Context, items []ActionableItem) error {
 	fmt.Println()
@@ -458,7 +485,9 @@ func (s *InteractiveSession) fixLocal(ctx context.Context, items []ActionableIte
 		fmt.Printf("Running: copilot -i...\n")
 		fmt.Println()
 
-		if err := s.copilotClient.RunFix(ctx); err != nil {
+		prompt := buildLocalFixPrompt(item)
+
+		if err := s.copilotClient.RunFix(ctx, prompt); err != nil {
 			fmt.Printf("⚠️  Warning: copilot interactive session failed: %v\n", err)
 			fmt.Println()
 			continue

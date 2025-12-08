@@ -17,8 +17,17 @@ func FormatInstructions(text string) string {
 // The function checks for the file existence and reads it, wrapping the content in a clear format
 func LoadInstructions(path string) (string, error) {
 	// Check if file exists
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
 		return "", nil // File doesn't exist, return empty string (not an error)
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to stat instructions file: %w", err)
+	}
+
+	// Ensure the file is readable
+	if info.Mode().Perm()&0444 == 0 {
+		return "", fmt.Errorf("instructions file is not readable: permission denied")
 	}
 
 	// Read the file

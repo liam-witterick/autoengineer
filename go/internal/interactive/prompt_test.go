@@ -274,3 +274,38 @@ func TestActionableItem(t *testing.T) {
 		t.Errorf("ActionableItem.IssueNum = %d, want 123", *item2.IssueNum)
 	}
 }
+
+func TestBuildLocalFixPrompt(t *testing.T) {
+	finding := findings.Finding{
+		ID:             "SEC-002",
+		Title:          "Example finding",
+		Description:    "A description of the issue",
+		Recommendation: "Follow best practices",
+		Files:          []string{"file1.txt", "dir/file2.go"},
+	}
+
+	prompt := buildLocalFixPrompt(ActionableItem{Finding: &finding})
+
+	if !strings.Contains(prompt, finding.ID) {
+		t.Errorf("prompt should include finding ID %q", finding.ID)
+	}
+	if !strings.Contains(prompt, finding.Title) {
+		t.Errorf("prompt should include finding title %q", finding.Title)
+	}
+	if !strings.Contains(prompt, finding.Description) {
+		t.Errorf("prompt should include finding description")
+	}
+	if !strings.Contains(prompt, finding.Recommendation) {
+		t.Errorf("prompt should include finding recommendation")
+	}
+	if !strings.Contains(prompt, "file1.txt") || !strings.Contains(prompt, "dir/file2.go") {
+		t.Errorf("prompt should include related files")
+	}
+
+	issueNum := 42
+	issuePrompt := buildLocalFixPrompt(ActionableItem{IsExisting: true, IssueNum: &issueNum, IssueTitle: "Existing bug"})
+
+	if !strings.Contains(issuePrompt, "#42") || !strings.Contains(issuePrompt, "Existing bug") {
+		t.Errorf("prompt should include existing issue details")
+	}
+}
