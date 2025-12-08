@@ -171,6 +171,29 @@ func run(cmd *cobra.Command, args []string) error {
 		displayScannerSummary(scannerStatuses)
 	}
 
+	// Run intelligent deduplication with Copilot
+	// This merges related findings across categories and filters out duplicates of existing issues
+	if len(allFindings) > 0 {
+		fmt.Println()
+		fmt.Println("🔄 Deduplicating findings...")
+		
+		client := copilot.NewClient()
+		deduplicated, err := client.RunDeduplication(ctx, allFindings, existingIssues)
+		if err != nil {
+			// Log the error but continue with original findings
+			fmt.Printf("   ⚠️  Warning: deduplication failed, continuing with original findings: %v\n", err)
+		} else {
+			beforeDedup := len(allFindings)
+			allFindings = deduplicated
+			deduplicatedCount := beforeDedup - len(allFindings)
+			if deduplicatedCount > 0 {
+				fmt.Printf("   Removed %d duplicate/related finding(s)\n", deduplicatedCount)
+			} else {
+				fmt.Printf("   No duplicates found\n")
+			}
+		}
+	}
+
 	// Filter findings by ignore config
 	filtered, ignoredCount := findings.Filter(allFindings, cfg)
 
