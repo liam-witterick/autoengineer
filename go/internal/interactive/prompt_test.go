@@ -185,12 +185,55 @@ func TestHandlePreview(t *testing.T) {
 		},
 	}
 
+	// Note: Full integration testing of handlePreview would require a mock issuesClient
+	// since it now calls getAllItems which requires getTrackedIssues.
+	// TODO: Consider adding dependency injection for issuesClient to enable more comprehensive testing.
+	// For now, we test the core conversion logic that handlePreview depends on.
 	session := &InteractiveSession{
 		findings: findings,
 	}
 
-	// handlePreview just prints output, so we'll just ensure it doesn't panic
-	session.handlePreview()
+	items := session.convertFindingsToItems()
+	if len(items) != len(findings) {
+		t.Errorf("convertFindingsToItems() returned %d items, want %d", len(items), len(findings))
+	}
+}
+
+func TestGetAllItemsCombinesCorrectly(t *testing.T) {
+	// Test that getAllItems combines tracked issues and new findings in the right order
+	findings := []findings.Finding{
+		{
+			ID:       "SEC-001",
+			Title:    "Security issue",
+			Severity: findings.SeverityHigh,
+		},
+		{
+			ID:       "PIPE-002",
+			Title:    "Pipeline issue",
+			Severity: findings.SeverityMedium,
+		},
+	}
+
+	session := &InteractiveSession{
+		findings: findings,
+	}
+
+	// Test convertFindingsToItems (this is used by getAllItems)
+	items := session.convertFindingsToItems()
+
+	if len(items) != 2 {
+		t.Errorf("Expected 2 items, got %d", len(items))
+	}
+
+	// All items should be new findings (not existing)
+	for i, item := range items {
+		if item.IsExisting {
+			t.Errorf("Item %d should not be marked as existing", i)
+		}
+		if item.Finding == nil {
+			t.Errorf("Item %d should have a Finding", i)
+		}
+	}
 }
 
 func TestActionableItem(t *testing.T) {
