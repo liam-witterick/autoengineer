@@ -163,28 +163,64 @@ func TestSemanticGroupingAcrossFiles(t *testing.T) {
 	}
 }
 
-// Test that findings with different categories are NOT merged
+// Test that findings with different categories are NOT merged unless very similar
 func TestNoMergeDifferentCategories(t *testing.T) {
 	findings := []Finding{
 		{
-			ID:       "SEC-001",
-			Title:    "Missing configuration",
-			Category: CategorySecurity,
-			Severity: SeverityHigh,
+			ID:          "SEC-001",
+			Title:       "IAM role has wildcard permissions",
+			Description: "IAM role grants overly broad access",
+			Category:    CategorySecurity,
+			Severity:    SeverityHigh,
 		},
 		{
-			ID:       "PIPE-001",
-			Title:    "Missing configuration",
-			Category: CategoryPipeline,
-			Severity: SeverityMedium,
+			ID:          "PIPE-001",
+			Title:       "Missing CI/CD configuration",
+			Description: "Pipeline needs optimization",
+			Category:    CategoryPipeline,
+			Severity:    SeverityMedium,
 		},
 	}
 
 	result := deduplicate(findings)
 
-	// Should NOT merge - different categories
+	// Should NOT merge - different categories and dissimilar content
 	if len(result) != 2 {
-		t.Errorf("expected 2 findings (different categories), got %d", len(result))
+		t.Errorf("expected 2 findings (different categories, dissimilar), got %d", len(result))
+	}
+}
+
+// Test that findings with different categories CAN merge if very similar
+func TestMergeDifferentCategoriesIfVerySimilar(t *testing.T) {
+	findings := []Finding{
+		{
+			ID:          "SEC-001",
+			Title:       "MSK cluster uses public subnets instead of private subnets",
+			Description: "The MSK cluster is configured with public subnets which poses a security risk",
+			Category:    CategorySecurity,
+			Severity:    SeverityHigh,
+			Files:       []string{"kafka.tf"},
+		},
+		{
+			ID:          "INFRA-001",
+			Title:       "MSK uses public subnets instead of private subnets",
+			Description: "MSK cluster should use private subnets for better isolation",
+			Category:    CategoryInfra,
+			Severity:    SeverityMedium,
+			Files:       []string{"kafka.tf"},
+		},
+	}
+
+	result := deduplicate(findings)
+
+	// Should merge - different categories but very similar content
+	if len(result) != 1 {
+		t.Errorf("expected 1 finding after merging very similar cross-category findings, got %d", len(result))
+	}
+
+	// Should preserve the higher severity
+	if len(result) > 0 && result[0].Severity != SeverityHigh {
+		t.Errorf("merged finding should have high severity, got %s", result[0].Severity)
 	}
 }
 

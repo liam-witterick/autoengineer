@@ -62,18 +62,19 @@ func deduplicate(findings []Finding) []Finding {
 
 // shouldMerge determines if two findings should be consolidated
 func shouldMerge(a, b Finding) bool {
-	// Must be same category
-	if a.Category != b.Category {
-		return false
-	}
-
 	// Calculate similarity score
 	score := calculateSimilarity(a, b)
 	
-	// Merge if similarity is above threshold (0.38 = 38%)
-	// Lower threshold allows for more grouping of related findings across different files
-	// Balanced to merge related issues while avoiding false positives
-	return score >= 0.38
+	// If same category, use normal threshold (0.38 = 38%)
+	if a.Category == b.Category {
+		return score >= 0.38
+	}
+	
+	// For cross-category merging, use a higher threshold (0.65 = 65%)
+	// This allows merging findings like "MSK uses public subnets" from 
+	// both security and infra categories if they're very similar
+	// Higher threshold prevents false positives across different categories
+	return score >= 0.65
 }
 
 // calculateSimilarity computes a similarity score between two findings (0.0 to 1.0)
