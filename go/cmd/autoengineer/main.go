@@ -123,6 +123,35 @@ func run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// Fetch existing tracked issues before analysis
+	fmt.Println("\n🔍 Fetching existing tracked issues...")
+	
+	owner, repo, err := getRepoInfo()
+	if err != nil {
+		return fmt.Errorf("failed to get repo info: %w", err)
+	}
+
+	label := os.Getenv("AUTOENGINEER_LABEL")
+	if label == "" {
+		label = "autoengineer"
+	}
+
+	issuesClient, err := issues.NewClient(owner, repo, label)
+	if err != nil {
+		return fmt.Errorf("failed to create issues client: %w", err)
+	}
+
+	existingIssues, err := issuesClient.ListOpenIssues(ctx)
+	if err != nil {
+		fmt.Printf("   ⚠️  Warning: failed to fetch existing issues: %v\n", err)
+		existingIssues = []issues.SearchResult{}
+	} else {
+		fmt.Printf("   Found %d existing tracked issue(s)\n", len(existingIssues))
+	}
+
+	// Build existing context for the analysis prompt
+	existingContext := analysis.BuildExistingContext(existingIssues)
+
 	// Run analysis with progress tracking
 	fmt.Println("\n🔍 Running analysis...")
 	fmt.Println()
@@ -130,7 +159,7 @@ func run(cmd *cobra.Command, args []string) error {
 	// Determine if scanners should run
 	skipScanners := flagNoScanners || flagFast
 
-	allFindings, scannerStatuses, err := runAnalysisWithScanners(ctx, flagScope, cfg, scannerCfg, skipScanners)
+	allFindings, scannerStatuses, err := runAnalysisWithScanners(ctx, flagScope, cfg, scannerCfg, skipScanners, existingContext)
 	if err != nil {
 		return fmt.Errorf("analysis failed: %w", err)
 	}
@@ -164,10 +193,10 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save findings: %w", err)
 	}
 
-	// Display preview
-	displayPreview(filtered, ignoredCount)
+	// Display preview with existing issues
+	displayPreview(existingIssues, filtered, ignoredCount)
 
-	if len(filtered) == 0 {
+	if len(filtered) == 0 && len(existingIssues) == 0 {
 		fmt.Println("\n✅ No findings to report!")
 		return nil
 	}
@@ -187,17 +216,7 @@ func run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Interactive mode
-	owner, repo, err := getRepoInfo()
-	if err != nil {
-		return fmt.Errorf("failed to get repo info: %w", err)
-	}
-
-	label := os.Getenv("AUTOENGINEER_LABEL")
-	if label == "" {
-		label = "autoengineer"
-	}
-
+	// Interactive mode (owner, repo, label already fetched above)
 	session, err := interactive.NewSession(filtered, owner, repo, label)
 	if err != nil {
 		return fmt.Errorf("failed to create interactive session: %w", err)
@@ -295,11 +314,12 @@ func isGitRepo() bool {
 	return cmd.Run() == nil
 }
 
-func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tracker *progress.ScopeTracker) ([]findings.Finding, error) {
+func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tracker *progress.ScopeTracker, existingContext string) ([]findings.Finding, error) {
 	client := copilot.NewClient()
 
 	base := analysis.BaseAnalyzer{
-		Client: client,
+		Client:          client,
+		ExistingContext: existingContext,
 	}
 
 	var allFindings []findings.Finding
@@ -401,7 +421,8 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tr
 				// Create a new client for each concurrent scope to avoid race conditions
 				scopeClient := copilot.NewClient()
 				scopeBase := analysis.BaseAnalyzer{
-					Client: scopeClient,
+					Client:          scopeClient,
+					ExistingContext: existingContext,
 				}
 
 				var analyzer analysis.Analyzer
@@ -452,7 +473,7 @@ func runAnalysis(ctx context.Context, scope string, cfg *config.IgnoreConfig, tr
 }
 
 // runAnalysisWithScanners runs both Copilot analysis and external scanners in parallel
-func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.IgnoreConfig, scannerCfg *config.ScannerConfig, skipScanners bool) ([]findings.Finding, []scanner.ScannerStatus, error) {
+func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.IgnoreConfig, scannerCfg *config.ScannerConfig, skipScanners bool, existingContext string) ([]findings.Finding, []scanner.ScannerStatus, error) {
 	type result struct {
 		findings []findings.Finding
 		statuses []scanner.ScannerStatus
@@ -491,7 +512,7 @@ func runAnalysisWithScanners(ctx context.Context, scope string, cfg *config.Igno
 
 	// Run Copilot analysis
 	go func() {
-		copilotFindings, err := runAnalysis(ctx, scope, cfg, tracker)
+		copilotFindings, err := runAnalysis(ctx, scope, cfg, tracker, existingContext)
 		copilotCh <- result{findings: copilotFindings, err: err}
 	}()
 
@@ -555,8 +576,24 @@ func saveFindings(allFindings []findings.Finding, outputPath string) error {
 	return os.WriteFile(outputPath, data, 0644)
 }
 
-func displayPreview(allFindings []findings.Finding, ignoredCount int) {
+func displayPreview(existingIssues []issues.SearchResult, allFindings []findings.Finding, ignoredCount int) {
 	fmt.Println()
+	
+	// Display existing tracked issues
+	if len(existingIssues) > 0 {
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println("📋 TRACKED ISSUES (existing GitHub issues)")
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println()
+		
+		for i, issue := range existingIssues {
+			fmt.Printf("%d. [#%d] %s\n", i+1, issue.Number, issue.Title)
+		}
+		
+		fmt.Println()
+	}
+	
+	// Display new findings
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println("📋 NEW FINDINGS")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
