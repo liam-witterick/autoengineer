@@ -112,6 +112,31 @@ func (c *Client) AddDelegatedLabel(ctx context.Context, issueNumber int) error {
 	return nil
 }
 
+// AssignCopilot assigns the Copilot coding agent to an issue
+func (c *Client) AssignCopilot(ctx context.Context, issueNumber int) error {
+	// Use GitHub API to add "copilot" as an assignee
+	// POST /repos/{owner}/{repo}/issues/{issue_number}/assignees
+	assigneeData := map[string]interface{}{
+		"assignees": []string{"copilot"},
+	}
+
+	body, err := json.Marshal(assigneeData)
+	if err != nil {
+		return err
+	}
+
+	err = c.apiClient.Post(
+		fmt.Sprintf("repos/%s/%s/issues/%d/assignees", c.owner, c.repo, issueNumber),
+		bytes.NewReader(body),
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to assign copilot to issue #%d: %w", issueNumber, err)
+	}
+
+	return nil
+}
+
 // CreateIssue creates a GitHub issue from a finding
 func (c *Client) CreateIssue(ctx context.Context, finding findings.Finding) (int, error) {
 	emoji := severityEmoji(finding.Severity)

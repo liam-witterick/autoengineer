@@ -701,8 +701,6 @@ func delegateIssues(ctx context.Context, issueNums []int) error {
 		fmt.Printf("⚠️  Warning: failed to ensure delegated label exists: %v\n", err)
 	}
 
-	client := copilot.NewClient()
-
 	for _, issueNum := range issueNums {
 		// Check if already delegated
 		hasDelegated, err := issuesClient.HasDelegatedLabel(ctx, issueNum)
@@ -720,10 +718,9 @@ func delegateIssues(ctx context.Context, issueNums []int) error {
 			fmt.Printf("   ⚠️  Warning: failed to add delegated label to issue #%d: %v\n", issueNum, err)
 		}
 
-		prompt := fmt.Sprintf("Fix the issue described in %s/%s#%d", owner, repo, issueNum)
-
-		if err := client.RunDelegate(ctx, prompt); err != nil {
-			fmt.Printf("   ⚠️  Warning: delegation failed for issue #%d: %v\n", issueNum, err)
+		// Assign copilot as assignee to trigger Copilot coding agent
+		if err := issuesClient.AssignCopilot(ctx, issueNum); err != nil {
+			fmt.Printf("   ⚠️  Warning: failed to assign copilot to issue #%d: %v\n", issueNum, err)
 			continue
 		}
 

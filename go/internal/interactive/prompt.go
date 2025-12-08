@@ -455,11 +455,9 @@ func (s *InteractiveSession) delegateIssues(ctx context.Context, issueNums []int
 			fmt.Printf("   ⚠️  Warning: failed to add delegated label to issue #%d: %v\n", issueNum, err)
 		}
 		
-		// Delegate to copilot coding agent
-		prompt := fmt.Sprintf("Fix the issue described in %s/%s#%d", s.owner, s.repo, issueNum)
-		
-		if err := s.copilotClient.RunDelegate(ctx, prompt); err != nil {
-			fmt.Printf("   ⚠️  Warning: delegation failed for issue #%d: %v\n", issueNum, err)
+		// Assign copilot as assignee to trigger Copilot coding agent
+		if err := s.issuesClient.AssignCopilot(ctx, issueNum); err != nil {
+			fmt.Printf("   ⚠️  Warning: failed to assign copilot to issue #%d: %v\n", issueNum, err)
 			continue
 		}
 		
