@@ -64,16 +64,21 @@ func (c *Client) RunAnalysis(ctx context.Context, prompt string) ([]findings.Fin
 }
 
 // RunFix runs copilot interactively to provide local fix suggestions
-func (c *Client) RunFix(ctx context.Context) error {
+func (c *Client) RunFix(ctx context.Context, prompt string) error {
 	// Use "copilot -i" for interactive local fixes
 	// The -i flag enables interactive mode where user can chat with Copilot
-	cmd := exec.CommandContext(ctx, c.BinaryPath, "-i")
-	
+	args := []string{"-i"}
+	if strings.TrimSpace(prompt) != "" {
+		args = append(args, "-p", prompt)
+	}
+
+	cmd := exec.CommandContext(ctx, c.BinaryPath, args...)
+
 	// Connect to stdin/stdout/stderr so user can interact
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
+
 	return cmd.Run()
 }
 
@@ -82,18 +87,18 @@ func (c *Client) RunDelegate(ctx context.Context, prompt string) error {
 	// Prepend /delegate to the prompt
 	delegatePrompt := "/delegate " + prompt
 	cmd := exec.CommandContext(ctx, c.BinaryPath, "-p", delegatePrompt)
-	
+
 	// Run in background - capture output for error reporting
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	
+
 	if err := cmd.Run(); err != nil {
 		if stderr.Len() > 0 {
 			return fmt.Errorf("delegation failed: %w (stderr: %s)", err, stderr.String())
 		}
 		return err
 	}
-	
+
 	return nil
 }
 
