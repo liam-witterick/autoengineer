@@ -17,10 +17,11 @@ const (
 
 // Client handles GitHub issue operations
 type Client struct {
-	apiClient *api.RESTClient
-	owner     string
-	repo      string
-	label     string
+	apiClient     *api.RESTClient
+	graphqlClient *api.GraphQLClient
+	owner         string
+	repo          string
+	label         string
 }
 
 // NewClient creates a new GitHub issues client
@@ -30,11 +31,18 @@ func NewClient(owner, repo, label string) (*Client, error) {
 		return nil, fmt.Errorf("failed to create GitHub API client: %w", err)
 	}
 
+	// Create GraphQL client for operations that require it (like assigning Copilot)
+	gqlClient, err := api.DefaultGraphQLClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GitHub GraphQL client: %w", err)
+	}
+
 	return &Client{
-		apiClient: client,
-		owner:     owner,
-		repo:      repo,
-		label:     label,
+		apiClient:     client,
+		graphqlClient: gqlClient,
+		owner:         owner,
+		repo:          repo,
+		label:         label,
 	}, nil
 }
 
@@ -113,31 +121,152 @@ func (c *Client) AddDelegatedLabel(ctx context.Context, issueNumber int) error {
 }
 
 // AssignCopilot assigns the Copilot coding agent to an issue.
-// Assigning 'copilot' as an assignee is the mechanism that triggers GitHub Copilot's
+// Assigning 'copilot-swe-agent' as an assignee triggers GitHub Copilot's
 // coding agent to work on the issue and create a PR with fixes.
+// This uses the GraphQL API because the REST API does not support assigning Copilot.
 func (c *Client) AssignCopilot(ctx context.Context, issueNumber int) error {
-	// Use REST API to assign copilot directly
-	// The Copilot coding agent username is simply "copilot"
-	assignData := map[string]interface{}{
-		"assignees": []string{"copilot"},
+	// Step 1: Query to get the issue node ID and find copilot-swe-agent actor
+	query := `
+		query($owner: String!, $name: String!, $issueNumber: Int!) {
+			repository(owner: $owner, name: $name) {
+				issue(number: $issueNumber) {
+					id
+				}
+				suggestedActors(capabilities: [CAN_BE_ASSIGNED], first: 100) {
+					nodes {
+						login
+						id
+					}
+				}
+			}
+		}
+	`
+
+	variables := map[string]interface{}{
+		"owner":       c.owner,
+		"name":        c.repo,
+		"issueNumber": issueNumber,
 	}
 
-	body, err := json.Marshal(assignData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal assign request: %w", err)
+	var queryResponse struct {
+		Repository struct {
+			Issue struct {
+				ID string `json:"id"`
+			} `json:"issue"`
+			SuggestedActors struct {
+				Nodes []struct {
+					Login string `json:"login"`
+					ID    string `json:"id"`
+				} `json:"nodes"`
+			} `json:"suggestedActors"`
+		} `json:"repository"`
 	}
 
-	// Use POST to add copilot as an assignee without overwriting existing assignees
-	err = c.apiClient.Post(
-		fmt.Sprintf("repos/%s/%s/issues/%d/assignees", c.owner, c.repo, issueNumber),
-		bytes.NewReader(body),
-		nil,
-	)
+	err := c.graphqlClient.DoWithContext(ctx, query, variables, &queryResponse)
 	if err != nil {
-		return fmt.Errorf("failed to assign copilot to issue #%d: %w", issueNumber, err)
+		return fmt.Errorf("failed to query issue and suggested actors: %w", err)
+	}
+
+	// Step 2: Find copilot-swe-agent in the suggested actors
+	var copilotActorID string
+	for _, actor := range queryResponse.Repository.SuggestedActors.Nodes {
+		if actor.Login == "copilot-swe-agent" {
+			copilotActorID = actor.ID
+			break
+		}
+	}
+
+	if copilotActorID == "" {
+		return fmt.Errorf("copilot-swe-agent is not available for this repository. Ensure GitHub Copilot coding agent is enabled for your organization/repository")
+	}
+
+	// Step 3: Use GraphQL mutation to assign Copilot to the issue
+	mutation := `
+		mutation($issueId: ID!, $assigneeIds: [ID!]!) {
+			addAssigneesToAssignable(input: {assignableId: $issueId, assigneeIds: $assigneeIds}) {
+				assignable {
+					... on Issue {
+						number
+						assignees(first: 10) {
+							nodes {
+								login
+							}
+						}
+					}
+				}
+			}
+		}
+	`
+
+	mutationVariables := map[string]interface{}{
+		"issueId":     queryResponse.Repository.Issue.ID,
+		"assigneeIds": []string{copilotActorID},
+	}
+
+	var mutationResponse struct {
+		AddAssigneesToAssignable struct {
+			Assignable struct {
+				Number    int `json:"number"`
+				Assignees struct {
+					Nodes []struct {
+						Login string `json:"login"`
+					} `json:"nodes"`
+				} `json:"assignees"`
+			} `json:"assignable"`
+		} `json:"addAssigneesToAssignable"`
+	}
+
+	err = c.graphqlClient.DoWithContext(ctx, mutation, mutationVariables, &mutationResponse)
+	if err != nil {
+		return fmt.Errorf("failed to assign copilot-swe-agent to issue #%d: %w", issueNumber, err)
 	}
 
 	return nil
+}
+
+// CheckCopilotAvailability checks if the Copilot coding agent is available for this repository
+func (c *Client) CheckCopilotAvailability(ctx context.Context) (bool, error) {
+	// Query to check if copilot-swe-agent is in suggested actors
+	query := `
+		query($owner: String!, $name: String!) {
+			repository(owner: $owner, name: $name) {
+				suggestedActors(capabilities: [CAN_BE_ASSIGNED], first: 100) {
+					nodes {
+						login
+					}
+				}
+			}
+		}
+	`
+
+	variables := map[string]interface{}{
+		"owner": c.owner,
+		"name":  c.repo,
+	}
+
+	var response struct {
+		Repository struct {
+			SuggestedActors struct {
+				Nodes []struct {
+					Login string `json:"login"`
+				} `json:"nodes"`
+			} `json:"suggestedActors"`
+		} `json:"repository"`
+	}
+
+	err := c.graphqlClient.DoWithContext(ctx, query, variables, &response)
+	if err != nil {
+		return false, fmt.Errorf("failed to query suggested actors: %w", err)
+	}
+
+	// Check if copilot-swe-agent is available
+	for _, actor := range response.Repository.SuggestedActors.Nodes {
+		if actor.Login == "copilot-swe-agent" {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // CreateIssue creates a GitHub issue from a finding
