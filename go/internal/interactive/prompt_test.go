@@ -219,7 +219,7 @@ func TestGetAllItemsCombinesCorrectly(t *testing.T) {
 
 	// Test convertFindingsToItems (this is used by getAllItems)
 	items := session.convertFindingsToItems()
-	
+
 	if len(items) != 2 {
 		t.Errorf("Expected 2 items, got %d", len(items))
 	}
