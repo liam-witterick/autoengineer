@@ -448,33 +448,24 @@ func (s *InteractiveSession) fixLocal(ctx context.Context, items []ActionableIte
 	fmt.Println()
 
 	for _, item := range items {
-		var prompt string
-
 		if item.IsExisting {
 			fmt.Printf("📌 Issue #%d: %s\n", *item.IssueNum, item.IssueTitle)
-			prompt = fmt.Sprintf("Fix the issue: %s (see %s/%s#%d for details)",
-				item.IssueTitle, s.owner, s.repo, *item.IssueNum)
 		} else {
 			fmt.Printf("📌 Finding: %s\n", item.Finding.Title)
-			prompt = fmt.Sprintf("Fix: %s. %s\nFiles: %s\nRecommendation: %s",
-				item.Finding.Title,
-				item.Finding.Description,
-				strings.Join(item.Finding.Files, ", "),
-				item.Finding.Recommendation)
 		}
 
 		fmt.Println()
 		fmt.Printf("Running: copilot -i...\n")
 		fmt.Println()
 
-		if err := s.copilotClient.RunFix(ctx, prompt); err != nil {
-			fmt.Printf("⚠️  Warning: copilot suggest failed: %v\n", err)
+		if err := s.copilotClient.RunFix(ctx); err != nil {
+			fmt.Printf("⚠️  Warning: copilot interactive session failed: %v\n", err)
 			fmt.Println()
 			continue
 		}
 
 		fmt.Println()
-		fmt.Println("✅ Copilot suggest completed")
+		fmt.Println("✅ Copilot interactive session completed")
 		fmt.Println()
 	}
 

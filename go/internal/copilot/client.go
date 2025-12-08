@@ -64,7 +64,7 @@ func (c *Client) RunAnalysis(ctx context.Context, prompt string) ([]findings.Fin
 }
 
 // RunFix runs copilot interactively to provide local fix suggestions
-func (c *Client) RunFix(ctx context.Context, prompt string) error {
+func (c *Client) RunFix(ctx context.Context) error {
 	// Use "copilot -i" for interactive local fixes
 	// The -i flag enables interactive mode where user can chat with Copilot
 	cmd := exec.CommandContext(ctx, c.BinaryPath, "-i")
