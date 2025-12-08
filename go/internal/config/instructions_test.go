@@ -192,3 +192,27 @@ func TestInstructionsFormatting(t *testing.T) {
 		t.Error("expected instructions to contain original content")
 	}
 }
+
+func TestFormatInstructions(t *testing.T) {
+	t.Run("with text", func(t *testing.T) {
+		text := "Test instructions"
+		formatted := FormatInstructions(text)
+		
+		if !strings.Contains(formatted, "CUSTOM INSTRUCTIONS FROM USER:") {
+			t.Error("expected formatted instructions to contain header")
+		}
+		if !strings.Contains(formatted, text) {
+			t.Error("expected formatted instructions to contain original text")
+		}
+		if !strings.Contains(formatted, "END CUSTOM INSTRUCTIONS") {
+			t.Error("expected formatted instructions to contain footer")
+		}
+	})
+	
+	t.Run("with empty text", func(t *testing.T) {
+		formatted := FormatInstructions("")
+		if formatted != "" {
+			t.Errorf("expected empty string, got %q", formatted)
+		}
+	})
+}

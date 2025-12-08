@@ -127,7 +127,7 @@ func run(cmd *cobra.Command, args []string) error {
 	// Priority order: --instructions-text > --instructions > .github/copilot-instructions.md
 	if flagInstructionsText != "" {
 		// Use inline instructions text
-		extraContext = fmt.Sprintf("\n\nCUSTOM INSTRUCTIONS FROM USER:\n%s\nEND CUSTOM INSTRUCTIONS\n", flagInstructionsText)
+		extraContext = config.FormatInstructions(flagInstructionsText)
 	} else if flagInstructions != "" {
 		// Use custom instructions file
 		instructions, err := config.LoadInstructions(flagInstructions)

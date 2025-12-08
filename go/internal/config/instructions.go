@@ -5,6 +5,14 @@ import (
 	"os"
 )
 
+// FormatInstructions wraps instructions text with clear formatting
+func FormatInstructions(text string) string {
+	if text == "" {
+		return ""
+	}
+	return fmt.Sprintf("\n\nCUSTOM INSTRUCTIONS FROM USER:\n%s\nEND CUSTOM INSTRUCTIONS\n", text)
+}
+
 // LoadInstructions loads custom instructions from a file or returns empty string if not found
 // The function checks for the file existence and reads it, wrapping the content in a clear format
 func LoadInstructions(path string) (string, error) {
@@ -25,8 +33,7 @@ func LoadInstructions(path string) (string, error) {
 	}
 
 	// Format the instructions with clear wrapping
-	formatted := fmt.Sprintf("\n\nCUSTOM INSTRUCTIONS FROM USER:\n%s\nEND CUSTOM INSTRUCTIONS\n", string(data))
-	return formatted, nil
+	return FormatInstructions(string(data)), nil
 }
 
 // LoadDefaultInstructions attempts to load the default .github/copilot-instructions.md file
