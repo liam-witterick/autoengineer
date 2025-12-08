@@ -18,11 +18,11 @@ const (
 
 // Client handles GitHub issue operations
 type Client struct {
-	apiClient    *api.RESTClient
+	apiClient     *api.RESTClient
 	graphqlClient *api.GraphQLClient
-	owner        string
-	repo         string
-	label        string
+	owner         string
+	repo          string
+	label         string
 }
 
 // NewClient creates a new GitHub issues client
@@ -212,7 +212,7 @@ func (c *Client) AssignCopilot(ctx context.Context, issueNumber int) error {
 func (c *Client) CreateIssue(ctx context.Context, finding findings.Finding) (int, error) {
 	emoji := severityEmoji(finding.Severity)
 	title := fmt.Sprintf("%s %s", emoji, finding.Title)
-	
+
 	body := formatIssueBody(finding)
 
 	issueData := map[string]interface{}{
