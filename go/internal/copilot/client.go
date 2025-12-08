@@ -117,14 +117,19 @@ func (c *Client) RunDeduplication(ctx context.Context, newFindings []findings.Fi
 
 	if err := cmd.Run(); err != nil {
 		// If deduplication fails, return error so caller can use original findings
-		return newFindings, fmt.Errorf("copilot deduplication failed: %w (stderr: %s)", err, stderr.String())
+		return newFindings, fmt.Errorf("copilot deduplication failed: %w (stderr: %q)", err, stderr.String())
 	}
 
 	// Extract JSON from output
 	jsonStr := extractJSON(stdout.String())
 	if jsonStr == "" {
 		// If we can't parse output, return error - Copilot may not have understood the prompt
-		return newFindings, fmt.Errorf("no JSON output from copilot deduplication")
+		// Include first 200 chars of output for debugging
+		output := stdout.String()
+		if len(output) > 200 {
+			output = output[:200] + "..."
+		}
+		return newFindings, fmt.Errorf("no JSON output from copilot deduplication (received: %q)", output)
 	}
 
 	var deduplicated []findings.Finding
@@ -164,23 +169,11 @@ func buildDeduplicationPrompt(newFindings []findings.Finding, existingIssues []i
 				prompt.WriteString(",\n")
 			}
 			// Marshal individual fields to ensure proper escaping
-			// If individual marshaling fails, use empty string as safe fallback
+			// json.Marshal for strings always succeeds, so we can ignore errors
 			idJSON, _ := json.Marshal(f.ID)
-			if idJSON == nil {
-				idJSON = []byte(`""`)
-			}
 			titleJSON, _ := json.Marshal(f.Title)
-			if titleJSON == nil {
-				titleJSON = []byte(`""`)
-			}
 			categoryJSON, _ := json.Marshal(f.Category)
-			if categoryJSON == nil {
-				categoryJSON = []byte(`""`)
-			}
 			severityJSON, _ := json.Marshal(f.Severity)
-			if severityJSON == nil {
-				severityJSON = []byte(`""`)
-			}
 			prompt.WriteString(fmt.Sprintf("  {\"id\": %s, \"title\": %s, \"category\": %s, \"severity\": %s}",
 				idJSON, titleJSON, categoryJSON, severityJSON))
 		}
