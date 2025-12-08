@@ -5,11 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/liam-witterick/autoengineer/go/internal/findings"
-	"github.com/shurcooL/githubv4"
 )
 
 const (
@@ -19,11 +17,10 @@ const (
 
 // Client handles GitHub issue operations
 type Client struct {
-	apiClient     *api.RESTClient
-	graphqlClient *api.GraphQLClient
-	owner         string
-	repo          string
-	label         string
+	apiClient *api.RESTClient
+	owner     string
+	repo      string
+	label     string
 }
 
 // NewClient creates a new GitHub issues client
@@ -33,17 +30,11 @@ func NewClient(owner, repo, label string) (*Client, error) {
 		return nil, fmt.Errorf("failed to create GitHub API client: %w", err)
 	}
 
-	graphqlClient, err := api.DefaultGraphQLClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create GitHub GraphQL client: %w", err)
-	}
-
 	return &Client{
-		apiClient:     client,
-		graphqlClient: graphqlClient,
-		owner:         owner,
-		repo:          repo,
-		label:         label,
+		apiClient: client,
+		owner:     owner,
+		repo:      repo,
+		label:     label,
 	}, nil
 }
 
@@ -125,83 +116,23 @@ func (c *Client) AddDelegatedLabel(ctx context.Context, issueNumber int) error {
 // Assigning 'copilot' as an assignee is the mechanism that triggers GitHub Copilot's
 // coding agent to work on the issue and create a PR with fixes.
 func (c *Client) AssignCopilot(ctx context.Context, issueNumber int) error {
-	// Step 1: Get the issue node ID using GraphQL
-	var issueQuery struct {
-		Repository struct {
-			Issue struct {
-				Id string
-			} `graphql:"issue(number: $issueNumber)"`
-		} `graphql:"repository(owner: $owner, name: $repo)"`
+	// Use REST API to assign copilot directly
+	// The Copilot coding agent username is simply "copilot"
+	assignData := map[string]interface{}{
+		"assignees": []string{"copilot"},
 	}
 
-	issueVariables := map[string]interface{}{
-		"owner":       githubv4.String(c.owner),
-		"repo":        githubv4.String(c.repo),
-		"issueNumber": githubv4.Int(issueNumber),
-	}
-
-	err := c.graphqlClient.Query("IssueNodeId", &issueQuery, issueVariables)
+	body, err := json.Marshal(assignData)
 	if err != nil {
-		return fmt.Errorf("failed to get issue node ID for issue #%d: %w", issueNumber, err)
+		return fmt.Errorf("failed to marshal assign request: %w", err)
 	}
 
-	issueNodeId := issueQuery.Repository.Issue.Id
-	if issueNodeId == "" {
-		return fmt.Errorf("issue #%d not found", issueNumber)
-	}
-
-	// Step 2: Find Copilot's actor ID from assignable users
-	var assignableQuery struct {
-		Repository struct {
-			AssignableUsers struct {
-				Nodes []struct {
-					Id    string
-					Login string
-				}
-			} `graphql:"assignableUsers(query: $query, first: $first)"`
-		} `graphql:"repository(owner: $owner, name: $repo)"`
-	}
-
-	assignableVariables := map[string]interface{}{
-		"owner": githubv4.String(c.owner),
-		"repo":  githubv4.String(c.repo),
-		"query": githubv4.String("copilot"),
-		"first": githubv4.Int(10),
-	}
-
-	err = c.graphqlClient.Query("AssignableUsers", &assignableQuery, assignableVariables)
-	if err != nil {
-		return fmt.Errorf("failed to query assignable users: %w", err)
-	}
-
-	// Look for copilot user (handle variations like copilot, copilot-swe-agent, github-copilot[bot])
-	var copilotActorId string
-	for _, user := range assignableQuery.Repository.AssignableUsers.Nodes {
-		if strings.Contains(strings.ToLower(user.Login), "copilot") {
-			copilotActorId = user.Id
-			break
-		}
-	}
-
-	if copilotActorId == "" {
-		return fmt.Errorf("copilot user not found in assignable users for repository %s/%s - ensure Copilot coding agent is enabled for this repository", c.owner, c.repo)
-	}
-
-	// Step 3: Assign Copilot using the addAssigneesToAssignable mutation
-	var mutation struct {
-		AddAssigneesToAssignable struct {
-			ClientMutationId string
-		} `graphql:"addAssigneesToAssignable(input: $input)"`
-	}
-
-	mutationVariables := map[string]interface{}{
-		"input": map[string]interface{}{
-			"assignableId": issueNodeId,
-			"assigneeIds":  []string{copilotActorId},
-		},
-	}
-
-	err = c.graphqlClient.Mutate("AssignCopilot", &mutation, mutationVariables)
+	// Use PATCH to update the issue with the copilot assignee
+	err = c.apiClient.Patch(
+		fmt.Sprintf("repos/%s/%s/issues/%d", c.owner, c.repo, issueNumber),
+		bytes.NewReader(body),
+		nil,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to assign copilot to issue #%d: %w", issueNumber, err)
 	}
