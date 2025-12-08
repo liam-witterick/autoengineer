@@ -9,6 +9,7 @@ import (
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/liam-witterick/autoengineer/go/internal/findings"
+	"github.com/shurcooL/githubv4"
 )
 
 const (
@@ -134,9 +135,9 @@ func (c *Client) AssignCopilot(ctx context.Context, issueNumber int) error {
 	}
 
 	issueVariables := map[string]interface{}{
-		"owner":       c.owner,
-		"repo":        c.repo,
-		"issueNumber": issueNumber,
+		"owner":       githubv4.String(c.owner),
+		"repo":        githubv4.String(c.repo),
+		"issueNumber": githubv4.Int(issueNumber),
 	}
 
 	err := c.graphqlClient.Query("IssueNodeId", &issueQuery, issueVariables)
@@ -162,10 +163,10 @@ func (c *Client) AssignCopilot(ctx context.Context, issueNumber int) error {
 	}
 
 	assignableVariables := map[string]interface{}{
-		"owner": c.owner,
-		"repo":  c.repo,
-		"query": "copilot",
-		"first": 10,
+		"owner": githubv4.String(c.owner),
+		"repo":  githubv4.String(c.repo),
+		"query": githubv4.String("copilot"),
+		"first": githubv4.Int(10),
 	}
 
 	err = c.graphqlClient.Query("AssignableUsers", &assignableQuery, assignableVariables)

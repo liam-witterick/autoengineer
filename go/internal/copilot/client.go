@@ -200,14 +200,38 @@ func buildDeduplicationPrompt(newFindings []findings.Finding, existingIssues []i
 
 // extractJSON extracts JSON content from markdown code blocks
 func extractJSON(output string) string {
-	// Look for ```json ... ``` blocks
+	// Try markdown code block first
 	re := regexp.MustCompile("(?s)```json\\s*\n(.*?)\n```")
 	matches := re.FindStringSubmatch(output)
 	if len(matches) > 1 {
-		return strings.TrimSpace(matches[1])
+		candidate := strings.TrimSpace(matches[1])
+		if json.Valid([]byte(candidate)) {
+			return candidate
+		}
 	}
 
-	// Fallback: try to find JSON array directly
+	// Try to find JSON array starting with [{ (common for array of objects)
+	startIdx := strings.Index(output, "[{")
+	if startIdx != -1 {
+		// Find matching closing bracket using depth tracking
+		depth := 0
+		for i := startIdx; i < len(output); i++ {
+			switch output[i] {
+			case '[':
+				depth++
+			case ']':
+				depth--
+				if depth == 0 {
+					candidate := output[startIdx : i+1]
+					if json.Valid([]byte(candidate)) {
+						return candidate
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback: try to find JSON array directly (line-by-line)
 	scanner := bufio.NewScanner(strings.NewReader(output))
 	var jsonLines []string
 	inJSON := false
@@ -228,7 +252,11 @@ func extractJSON(output string) string {
 	}
 
 	if len(jsonLines) > 0 {
-		return strings.Join(jsonLines, "\n")
+		candidate := strings.Join(jsonLines, "\n")
+		// Validate before returning
+		if json.Valid([]byte(candidate)) {
+			return candidate
+		}
 	}
 
 	return ""

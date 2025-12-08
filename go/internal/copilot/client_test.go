@@ -198,3 +198,113 @@ func TestBuildDeduplicationPromptInstructions(t *testing.T) {
 func contains(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
+
+// TestExtractJSON tests the extractJSON function with various input formats
+func TestExtractJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name: "markdown code block",
+			input: "Here is the result:\n```json\n[{\"id\": \"1\", \"name\": \"test\"}]\n```\nDone!",
+			expected: "[{\"id\": \"1\", \"name\": \"test\"}]",
+		},
+		{
+			name: "inline JSON array starting with [{",
+			input: "The output is: [{\"id\": \"1\", \"name\": \"test\"}] and that's it.",
+			expected: "[{\"id\": \"1\", \"name\": \"test\"}]",
+		},
+		{
+			name: "JSON array with nested objects",
+			input: "Result: [{\"id\": \"1\", \"data\": {\"nested\": \"value\"}}, {\"id\": \"2\"}]",
+			expected: "[{\"id\": \"1\", \"data\": {\"nested\": \"value\"}}, {\"id\": \"2\"}]",
+		},
+		{
+			name: "JSON array with ellipsis after",
+			input: "[{\"id\": \"1\"}]... and more text",
+			expected: "[{\"id\": \"1\"}]",
+		},
+		{
+			name: "line-by-line JSON array",
+			input: "[\n  {\"id\": \"1\"},\n  {\"id\": \"2\"}\n]",
+			expected: "[\n  {\"id\": \"1\"},\n  {\"id\": \"2\"}\n]",
+		},
+		{
+			name: "markdown code block with invalid JSON - returns empty",
+			input: "```json\n[{\"id\": 1, \"name\": test}]\n```",
+			expected: "",
+		},
+		{
+			name: "inline invalid JSON - returns empty",
+			input: "The output is: [{\"id\": 1, \"name\": test.}] invalid",
+			expected: "",
+		},
+		{
+			name: "no JSON present",
+			input: "This is just plain text without any JSON",
+			expected: "",
+		},
+		{
+			name: "empty string",
+			input: "",
+			expected: "",
+		},
+		{
+			name: "JSON array with nested arrays",
+			input: "[{\"id\": \"1\", \"items\": [\"a\", \"b\"]}, {\"id\": \"2\", \"items\": []}]",
+			expected: "[{\"id\": \"1\", \"items\": [\"a\", \"b\"]}, {\"id\": \"2\", \"items\": []}]",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractJSON(tt.input)
+			if result != tt.expected {
+				t.Errorf("extractJSON() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestExtractJSONPriority(t *testing.T) {
+	// Test that markdown code blocks are prioritized over inline JSON
+	input := "Some text [{\"inline\": \"json\"}] and ```json\n[{\"code\": \"block\"}]\n```"
+	result := extractJSON(input)
+	expected := "[{\"code\": \"block\"}]"
+	
+	if result != expected {
+		t.Errorf("extractJSON() should prioritize code blocks, got %q, want %q", result, expected)
+	}
+}
+
+func TestExtractJSONValidation(t *testing.T) {
+	// Test that invalid JSON is rejected even if pattern matches
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name: "invalid JSON in code block",
+			input: "```json\n[{id: 1}]\n```",
+		},
+		{
+			name: "malformed inline JSON",
+			input: "[{\"id\": 1, \"name\": }]",
+		},
+		{
+			name: "incomplete JSON array",
+			input: "[{\"id\": 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractJSON(tt.input)
+			if result != "" {
+				t.Errorf("extractJSON() should return empty string for invalid JSON, got %q", result)
+			}
+		})
+	}
+}
