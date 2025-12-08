@@ -127,9 +127,9 @@ func (c *Client) AssignCopilot(ctx context.Context, issueNumber int) error {
 		return fmt.Errorf("failed to marshal assign request: %w", err)
 	}
 
-	// Use PATCH to update the issue with the copilot assignee
-	err = c.apiClient.Patch(
-		fmt.Sprintf("repos/%s/%s/issues/%d", c.owner, c.repo, issueNumber),
+	// Use POST to add copilot as an assignee without overwriting existing assignees
+	err = c.apiClient.Post(
+		fmt.Sprintf("repos/%s/%s/issues/%d/assignees", c.owner, c.repo, issueNumber),
 		bytes.NewReader(body),
 		nil,
 	)
