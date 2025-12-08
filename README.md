@@ -206,6 +206,10 @@ autoengineer --scope security
 autoengineer --scope pipeline
 autoengineer --scope infra
 
+# Use custom instructions to guide analysis
+autoengineer --instructions ./my-custom-instructions.md
+autoengineer --instructions-text "Focus on Terraform security issues"
+
 # Full automation — find issues, create tickets, delegate fixes
 # (PRs are created automatically, you review and merge them)
 autoengineer --create-issues --delegate
@@ -289,6 +293,10 @@ Create `.github/copilot-instructions.md`:
 - Skip example directories
 ```
 
+**Note:** AutoEngineer automatically loads this file if it exists. You can also:
+- Use `--instructions <path>` to specify a different instructions file
+- Use `--instructions-text "your instructions"` to pass instructions directly on the command line
+
 ### Ignore Specific Findings
 
 Create `.github/autoengineer-ignore.yaml`:
@@ -321,6 +329,8 @@ ignore_patterns:
 | `--create-issues` | Automatically create GitHub Issues for findings |
 | `--delegate` | Delegate fixes to Copilot Coding Agent (requires `--create-issues`) |
 | `--min-severity <level>` | Only action findings at this level or above: `low`, `medium`, `high` |
+| `--instructions <path>` | Path to custom instructions file (overrides `.github/copilot-instructions.md`) |
+| `--instructions-text <text>` | Custom instructions as text (overrides file-based instructions) |
 | `--no-scanners` | Skip external scanner integration |
 | `--fast` | Fast mode - skip scanners (alias for `--no-scanners`) |
 | `--check` | Verify dependencies and show scanner status |
