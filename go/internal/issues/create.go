@@ -135,7 +135,8 @@ func (c *Client) AssignCopilot(ctx context.Context, issueNumber int) error {
 				suggestedActors(capabilities: [CAN_BE_ASSIGNED], first: 100) {
 					nodes {
 						login
-						id
+						... on Bot { id }
+						... on User { id }
 					}
 				}
 			}
