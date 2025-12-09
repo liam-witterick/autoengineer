@@ -45,7 +45,13 @@ func (c *Client) FindByTitle(ctx context.Context, title string) (*SearchResult, 
 		return -1
 	}, searchTitle)
 
-	query := fmt.Sprintf("\"%s\" in:title repo:%s/%s state:open", searchTitle, c.owner, c.repo)
+	// Ensure we have a non-empty search string after cleaning
+	searchTitle = strings.TrimSpace(searchTitle)
+	if searchTitle == "" {
+		return nil, nil
+	}
+
+	query := fmt.Sprintf("\"%s\" in:title repo:%s/%s state:open label:%s", searchTitle, c.owner, c.repo, c.label)
 	encodedQuery := url.QueryEscape(query)
 	
 	var result struct {
