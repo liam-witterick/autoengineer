@@ -460,3 +460,113 @@ func TestMergePreservesHighSeverity(t *testing.T) {
 		t.Errorf("merged finding should have high severity, got %s", result[0].Severity)
 	}
 }
+
+func TestMergeWithCodeSnippets(t *testing.T) {
+	finding1 := Finding{
+		Title:       "Security issue in production environment",
+		Description: "Production configuration lacks proper security settings",
+		Severity:    SeverityHigh,
+		Category:    CategorySecurity,
+		Files:       []string{"main.tf"},
+		CodeSnippets: []CodeSnippet{
+			{
+				File:      "main.tf",
+				StartLine: 10,
+				EndLine:   15,
+				Code:      "resource \"aws_s3_bucket\" \"example\" {}",
+			},
+		},
+	}
+
+	finding2 := Finding{
+		Title:       "Security issue in production environment configuration",
+		Description: "Production configuration requires security review",
+		Severity:    SeverityHigh,
+		Category:    CategorySecurity,
+		Files:       []string{"main.tf"},
+		CodeSnippets: []CodeSnippet{
+			{
+				File:      "main.tf",
+				StartLine: 20,
+				EndLine:   25,
+				Code:      "resource \"aws_instance\" \"example\" {}",
+			},
+		},
+	}
+
+	findings := []Finding{finding1, finding2}
+	result := deduplicate(findings)
+
+	// Should merge into one finding
+	if len(result) != 1 {
+		t.Errorf("expected 1 merged finding, got %d", len(result))
+	}
+
+	// Should have both code snippets
+	if len(result[0].CodeSnippets) != 2 {
+		t.Errorf("expected 2 code snippets, got %d", len(result[0].CodeSnippets))
+	}
+}
+
+func TestMergeDeduplicatesCodeSnippets(t *testing.T) {
+	finding1 := Finding{
+		Title:       "Security issue",
+		Description: "Issue description",
+		Severity:    SeverityHigh,
+		Category:    CategorySecurity,
+		Files:       []string{"main.tf"},
+		CodeSnippets: []CodeSnippet{
+			{
+				File:      "main.tf",
+				StartLine: 10,
+				EndLine:   15,
+				Code:      "resource \"aws_s3_bucket\" \"example\" {}",
+			},
+		},
+	}
+
+	finding2 := Finding{
+		Title:       "Security issue",
+		Description: "Issue description",
+		Severity:    SeverityHigh,
+		Category:    CategorySecurity,
+		Files:       []string{"main.tf"},
+		CodeSnippets: []CodeSnippet{
+			{
+				File:      "main.tf",
+				StartLine: 10,
+				EndLine:   15,
+				Code:      "resource \"aws_s3_bucket\" \"example\" {}",
+			},
+		},
+	}
+
+	findings := []Finding{finding1, finding2}
+	result := deduplicate(findings)
+
+	// Should merge into one finding
+	if len(result) != 1 {
+		t.Errorf("expected 1 merged finding, got %d", len(result))
+	}
+
+	// Should deduplicate identical code snippets
+	if len(result[0].CodeSnippets) != 1 {
+		t.Errorf("expected 1 code snippet (deduplicated), got %d", len(result[0].CodeSnippets))
+	}
+}
+
+func TestSnippetKey(t *testing.T) {
+	snippet := CodeSnippet{
+		File:      "main.tf",
+		StartLine: 10,
+		EndLine:   15,
+		Code:      "example code",
+	}
+
+	key := snippetKey(snippet)
+	expected := "main.tf:10-15"
+
+	if key != expected {
+		t.Errorf("snippetKey() = %q, want %q", key, expected)
+	}
+}
