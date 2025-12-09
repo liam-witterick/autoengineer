@@ -13,6 +13,13 @@ import (
 	"github.com/liam-witterick/autoengineer/go/internal/issues"
 )
 
+const (
+	// maxDescriptionLength is the maximum number of characters to show in preview descriptions
+	maxDescriptionLength = 150
+	// maxCodeSnippetLines is the maximum number of lines to show for code snippets in preview
+	maxCodeSnippetLines = 10
+)
+
 // ActionableItem represents something that can be acted upon (finding or existing issue)
 type ActionableItem struct {
 	Finding    *findings.Finding
@@ -134,22 +141,21 @@ func (s *InteractiveSession) displayAllItems(allItems []ActionableItem) {
 		fmt.Println()
 		for i, item := range allItems {
 			if !item.IsExisting {
-				itemNum := i + 1
 				emoji := findings.SeverityEmoji(item.Finding.Severity)
 				title := item.Finding.Title
 				files := strings.Join(item.Finding.Files, ", ")
 				
-				fmt.Printf("%d. %s %s\n", itemNum, emoji, title)
+				fmt.Printf("%d. %s %s\n", i+1, emoji, title)
 				
 				if files != "" {
 					fmt.Printf("   Files: %s\n", files)
 				}
 				
-				// Show truncated description (150 chars max)
+				// Show truncated description
 				if item.Finding.Description != "" {
 					desc := item.Finding.Description
-					if len(desc) > 150 {
-						desc = desc[:150] + "..."
+					if len(desc) > maxDescriptionLength {
+						desc = desc[:maxDescriptionLength] + "..."
 					}
 					fmt.Printf("   Description: %s\n", desc)
 				}
@@ -168,18 +174,17 @@ func (s *InteractiveSession) displayAllItems(allItems []ActionableItem) {
 					header += "):"
 					fmt.Println(header)
 					
-					// Truncate code to max 10 lines
+					// Truncate code to max lines
 					lines := strings.Split(snippet.Code, "\n")
-					maxLines := 10
-					if len(lines) > maxLines {
-						lines = lines[:maxLines]
+					if len(lines) > maxCodeSnippetLines {
+						lines = lines[:maxCodeSnippetLines]
 					}
 					
 					fmt.Println("   ```")
 					for _, line := range lines {
 						fmt.Printf("   %s\n", line)
 					}
-					if len(strings.Split(snippet.Code, "\n")) > maxLines {
+					if len(strings.Split(snippet.Code, "\n")) > maxCodeSnippetLines {
 						fmt.Println("   ... (truncated)")
 					}
 					fmt.Println("   ```")
