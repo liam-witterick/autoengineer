@@ -1,8 +1,6 @@
 package copilot
 
 import (
-	"context"
-	"os/exec"
 	"strings"
 	"testing"
 
@@ -343,11 +341,6 @@ func TestRunFixCommandConstruction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a test command that echoes its arguments
-			// We can't easily test the actual command execution, but we can verify
-			// the args construction by creating a command with a mock binary
-			client := &Client{BinaryPath: "echo"}
-			
 			// Build args the same way RunFix does
 			args := []string{"-i"}
 			if strings.TrimSpace(tt.prompt) != "" {
@@ -371,13 +364,6 @@ func TestRunFixCommandConstruction(t *testing.T) {
 				if arg == "-p" {
 					t.Errorf("args should not contain -p flag, but it does: %v", args)
 				}
-			}
-
-			// Verify command construction works without errors
-			ctx := context.Background()
-			cmd := exec.CommandContext(ctx, client.BinaryPath, args...)
-			if cmd == nil {
-				t.Error("failed to create command")
 			}
 		})
 	}
