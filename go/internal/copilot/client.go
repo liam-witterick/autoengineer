@@ -69,7 +69,7 @@ func (c *Client) RunFix(ctx context.Context, prompt string) error {
 	// The -i flag enables interactive mode where user can chat with Copilot
 	args := []string{"-i"}
 	if strings.TrimSpace(prompt) != "" {
-		args = append(args, "-p", prompt)
+		args = append(args, prompt)
 	}
 
 	cmd := exec.CommandContext(ctx, c.BinaryPath, args...)
