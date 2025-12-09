@@ -7,6 +7,10 @@ set -e
 # Default to patch if no argument provided
 BUMP_TYPE="${1:-patch}"
 
+# Determine base branch (falls back to master)
+BASE_BRANCH=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')
+BASE_BRANCH=${BASE_BRANCH:-master}
+
 # Validate bump type
 if [[ ! "$BUMP_TYPE" =~ ^(major|minor|patch)$ ]]; then
     echo "❌ Invalid bump type: $BUMP_TYPE"
@@ -46,7 +50,17 @@ esac
 NEW_VERSION="$MAJOR.$MINOR.$PATCH"
 
 echo "🚀 Bumping to: v$NEW_VERSION"
+echo "📌 Base branch: $BASE_BRANCH"
 echo ""
+
+# Prepare release branch
+git fetch origin "$BASE_BRANCH"
+git checkout "$BASE_BRANCH"
+git pull --ff-only origin "$BASE_BRANCH"
+
+RELEASE_BRANCH="release/v$NEW_VERSION"
+git checkout -B "$RELEASE_BRANCH" "origin/$BASE_BRANCH"
+echo "✅ Created release branch: $RELEASE_BRANCH"
 
 # Update version in install.sh
 sed -i "s/VERSION=\"$CURRENT_VERSION\"/VERSION=\"$NEW_VERSION\"/" install.sh
@@ -67,13 +81,32 @@ echo "✅ Committed version bump"
 
 # Create and push tag
 git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
-echo "✅ Created tag v$NEW_VERSION"
-
-# Push commit and tag
-git push
 git push origin "v$NEW_VERSION"
-echo "✅ Pushed to remote"
+echo "✅ Pushed tag to remote"
+
+# Push release branch
+git push -u origin "$RELEASE_BRANCH"
+echo "✅ Pushed branch to remote"
+
+# Open a pull request if gh is available; otherwise print the URL
+ORIGIN_URL=$(git config --get remote.origin.url)
+REPO_SLUG=$(echo "$ORIGIN_URL" | sed -E 's#(git@github.com:|https?://github.com/)([^/]+/[^/.]+)(\\.git)?#\\2#')
+PR_TITLE="Release v$NEW_VERSION"
+PR_URL="https://github.com/$REPO_SLUG/compare/$BASE_BRANCH...$RELEASE_BRANCH?expand=1"
+
+if command -v gh >/dev/null 2>&1; then
+    if gh auth status >/dev/null 2>&1; then
+        gh pr create --title "$PR_TITLE" --body "Automated release for v$NEW_VERSION" --base "$BASE_BRANCH" --head "$RELEASE_BRANCH" || {
+            echo "⚠️  gh pr create failed; open manually: $PR_URL"
+        }
+    else
+        echo "⚠️  gh installed but not authenticated; open PR manually: $PR_URL"
+    fi
+else
+    echo "ℹ️  Open PR: $PR_URL"
+fi
 
 echo ""
 echo "🎉 Released v$NEW_VERSION!"
-echo "   View release: https://github.com/liam-witterick/autoengineer/releases/tag/v$NEW_VERSION"
+echo "   Branch: $RELEASE_BRANCH"
+echo "   PR: $PR_URL"
