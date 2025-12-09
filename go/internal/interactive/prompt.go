@@ -135,7 +135,7 @@ func (s *InteractiveSession) displayAllItems(allItems []ActionableItem) {
 		for i, item := range allItems {
 			if !item.IsExisting {
 				emoji := findings.SeverityEmoji(item.Finding.Severity)
-				fmt.Printf("%d. %s %s [%s]\n", i+1, emoji, item.Finding.Title, item.Finding.ID)
+				fmt.Printf("%d. %s %s\n", i+1, emoji, item.Finding.Title)
 			}
 		}
 	}
@@ -330,7 +330,7 @@ func (s *InteractiveSession) handleLater(ctx context.Context) error {
 		}
 
 		// Check if issue exists
-		exists, matchType, err := s.issuesClient.IssueExists(ctx, finding.ID, finding.Title)
+		exists, matchType, err := s.issuesClient.IssueExists(ctx, finding.Title)
 		if err != nil {
 			fmt.Printf("⚠️  Warning: failed to check for existing issue: %v\n", err)
 		}
@@ -348,7 +348,7 @@ func (s *InteractiveSession) handleLater(ctx context.Context) error {
 			continue
 		}
 
-		fmt.Printf("   ✅ Created [%s] #%d\n", finding.ID, issueNum)
+		fmt.Printf("   ✅ Created #%d\n", issueNum)
 		created++
 	}
 
@@ -451,7 +451,7 @@ func buildLocalFixPrompt(item ActionableItem) string {
 		prompt.WriteString(fmt.Sprintf("GitHub issue #%d: %s\n", *item.IssueNum, item.IssueTitle))
 		prompt.WriteString("Help address this issue using the local codebase.\n")
 	} else if item.Finding != nil {
-		prompt.WriteString(fmt.Sprintf("Finding [%s]: %s\n", item.Finding.ID, item.Finding.Title))
+		prompt.WriteString(fmt.Sprintf("Finding: %s\n", item.Finding.Title))
 		if strings.TrimSpace(item.Finding.Description) != "" {
 			prompt.WriteString(fmt.Sprintf("Description: %s\n", item.Finding.Description))
 		}
@@ -525,7 +525,7 @@ func (s *InteractiveSession) fixCloud(ctx context.Context, items []ActionableIte
 			fmt.Printf("🔧 Using existing issue #%d\n", issueNum)
 		} else {
 			// Create new issue for finding
-			exists, matchType, err := s.issuesClient.IssueExists(ctx, item.Finding.ID, item.Finding.Title)
+			exists, matchType, err := s.issuesClient.IssueExists(ctx, item.Finding.Title)
 			if err != nil {
 				fmt.Printf("⚠️  Warning: failed to check for existing issue: %v\n", err)
 			}

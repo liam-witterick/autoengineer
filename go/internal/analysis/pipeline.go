@@ -35,10 +35,9 @@ PIPELINE FOCUS AREAS:
 - Artifact management: Missing retention policies, oversized artifacts
 
 Format:
-[{"id": "PIPE-xxxxx", "category": "pipeline", "title": "string", "severity": "high|medium|low", "description": "string", "recommendation": "string", "files": ["path/to/file"]}]
+[{"category": "pipeline", "title": "string", "severity": "high|medium|low", "description": "string", "recommendation": "string", "files": ["path/to/file"]}]
 
 Rules:
-- id: Must start with "PIPE-" followed by unique identifier
 - category: Must be "pipeline"
 - severity: high, medium, or low (lowercase)
 - title: concise, under 80 chars
@@ -51,11 +50,8 @@ Rules:
 		return nil, err
 	}
 
-	// Ensure all findings have IDs and correct category
+	// Ensure correct category
 	for i := range results {
-		if results[i].ID == "" {
-			results[i].ID = GenerateID(findings.PrefixPipeline, results[i].Title, results[i].Files)
-		}
 		results[i].Category = findings.CategoryPipeline
 	}
 

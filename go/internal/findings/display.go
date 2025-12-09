@@ -46,7 +46,7 @@ func DisplayFindings(findings []Finding, opts DisplayOptions) {
 	for i := 0; i < maxDisplay; i++ {
 		f := findings[i]
 		emoji := SeverityEmoji(f.Severity)
-		fmt.Printf("%d. %s %s [%s]\n", i+1, emoji, f.Title, f.ID)
+		fmt.Printf("%d. %s %s\n", i+1, emoji, f.Title)
 		
 		if opts.ShowCategory {
 			fmt.Printf("   Category: %s\n", f.Category)

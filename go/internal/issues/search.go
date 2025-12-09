@@ -29,37 +29,6 @@ func extractLabelNames(labels []labelStruct) []string {
 	return labelNames
 }
 
-// FindByID searches for an issue by check ID in the body
-func (c *Client) FindByID(ctx context.Context, checkID string) (*SearchResult, error) {
-	query := fmt.Sprintf("%s in:body repo:%s/%s state:open label:%s", checkID, c.owner, c.repo, c.label)
-	encodedQuery := url.QueryEscape(query)
-	
-	var result struct {
-		Items []struct {
-			Number int           `json:"number"`
-			Title  string        `json:"title"`
-			Body   string        `json:"body"`
-			Labels []labelStruct `json:"labels"`
-		} `json:"items"`
-	}
-
-	err := c.apiClient.Get(fmt.Sprintf("search/issues?q=%s", encodedQuery), &result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to search for issue: %w", err)
-	}
-
-	if len(result.Items) == 0 {
-		return nil, nil
-	}
-
-	return &SearchResult{
-		Number: result.Items[0].Number,
-		Title:  result.Items[0].Title,
-		Body:   result.Items[0].Body,
-		Labels: extractLabelNames(result.Items[0].Labels),
-	}, nil
-}
-
 // FindByTitle searches for an issue by title similarity
 func (c *Client) FindByTitle(ctx context.Context, title string) (*SearchResult, error) {
 	// Use first 50 chars for fuzzy matching
@@ -105,19 +74,46 @@ func (c *Client) FindByTitle(ctx context.Context, title string) (*SearchResult, 
 	}, nil
 }
 
-// IssueExists checks if an issue exists by ID or title
-func (c *Client) IssueExists(ctx context.Context, checkID, title string) (bool, string, error) {
-	// First try by ID
-	result, err := c.FindByID(ctx, checkID)
+// IssueExists checks if an issue exists by title
+func (c *Client) IssueExists(ctx context.Context, title string) (bool, string, error) {
+	// Search by title
+	result, err := c.FindByTitle(ctx, title)
 	if err != nil {
 		return false, "", err
 	}
 	if result != nil {
-		return true, "check_id", nil
+		return true, "title", nil
 	}
 
-	// Then try by title
-	result, err = c.FindByTitle(ctx, title)
+	return false, "", nil
+}
+
+// SearchResult represents a search match
+type SearchResult struct {
+	Number int
+	Title  string
+	Body   string
+	Labels []string
+}
+
+// labelStruct is used for parsing label JSON responses
+type labelStruct struct {
+	Name string `json:"name"`
+}
+
+// extractLabelNames converts label structs to label name strings
+func extractLabelNames(labels []labelStruct) []string {
+	labelNames := make([]string, len(labels))
+	for i, label := range labels {
+		labelNames[i] = label.Name
+	}
+	return labelNames
+}
+
+// IssueExists checks if an issue exists by title
+func (c *Client) IssueExists(ctx context.Context, title string) (bool, string, error) {
+	// Search by title
+	result, err := c.FindByTitle(ctx, title)
 	if err != nil {
 		return false, "", err
 	}

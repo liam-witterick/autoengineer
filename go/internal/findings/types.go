@@ -4,7 +4,6 @@ import "time"
 
 // Finding represents a single issue discovered during analysis
 type Finding struct {
-	ID             string   `json:"id"`
 	Category       string   `json:"category"`
 	Title          string   `json:"title"`
 	Severity       string   `json:"severity"`
@@ -27,16 +26,9 @@ const (
 	CategoryInfra    = "infra"
 )
 
-// ID prefixes
-const (
-	PrefixSecurity = "SEC-"
-	PrefixPipeline = "PIPE-"
-	PrefixInfra    = "INFRA-"
-)
-
 // AcceptedFinding represents an accepted risk in the ignore config
 type AcceptedFinding struct {
-	ID           string    `yaml:"id"`
+	Title        string    `yaml:"title"`
 	Reason       string    `yaml:"reason,omitempty"`
 	AcceptedBy   string    `yaml:"accepted_by,omitempty"`
 	AcceptedDate time.Time `yaml:"accepted_date,omitempty"`

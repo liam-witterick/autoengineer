@@ -35,10 +35,9 @@ INFRASTRUCTURE FOCUS AREAS:
 - Module structure: Poor separation of concerns, missing outputs, undocumented variables
 
 Format:
-[{"id": "INFRA-xxxxx", "category": "infra", "title": "string", "severity": "high|medium|low", "description": "string", "recommendation": "string", "files": ["path/to/file"]}]
+[{"category": "infra", "title": "string", "severity": "high|medium|low", "description": "string", "recommendation": "string", "files": ["path/to/file"]}]
 
 Rules:
-- id: Must start with "INFRA-" followed by unique identifier
 - category: Must be "infra"
 - severity: high, medium, or low (lowercase)
 - title: concise, under 80 chars
@@ -51,11 +50,8 @@ Rules:
 		return nil, err
 	}
 
-	// Ensure all findings have IDs and correct category
+	// Ensure correct category
 	for i := range results {
-		if results[i].ID == "" {
-			results[i].ID = GenerateID(findings.PrefixInfra, results[i].Title, results[i].Files)
-		}
 		results[i].Category = findings.CategoryInfra
 	}
 
