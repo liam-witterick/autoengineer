@@ -1,6 +1,7 @@
 package findings
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 )
@@ -278,6 +279,24 @@ func mergeFindings(a, b Finding) Finding {
 	// Sort files for consistency
 	sort.Strings(mergedFiles)
 
+	// Merge code snippets (deduplicate by file and line range)
+	snippetMap := make(map[string]CodeSnippet)
+	for _, snippet := range base.CodeSnippets {
+		key := snippetKey(snippet)
+		snippetMap[key] = snippet
+	}
+	for _, snippet := range other.CodeSnippets {
+		key := snippetKey(snippet)
+		if _, exists := snippetMap[key]; !exists {
+			snippetMap[key] = snippet
+		}
+	}
+
+	mergedSnippets := make([]CodeSnippet, 0, len(snippetMap))
+	for _, snippet := range snippetMap {
+		mergedSnippets = append(mergedSnippets, snippet)
+	}
+
 	// Merge descriptions if different and both non-empty
 	mergedDesc := base.Description
 	if other.Description != "" && other.Description != base.Description {
@@ -304,7 +323,13 @@ func mergeFindings(a, b Finding) Finding {
 		Description:    mergedDesc,
 		Recommendation: mergedRec,
 		Files:          mergedFiles,
+		CodeSnippets:   mergedSnippets,
 	}
+}
+
+// snippetKey generates a unique key for a code snippet to enable deduplication
+func snippetKey(snippet CodeSnippet) string {
+	return fmt.Sprintf("%s:%d-%d", snippet.File, snippet.StartLine, snippet.EndLine)
 }
 
 // severityValue returns a numeric value for severity (lower is more severe)

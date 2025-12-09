@@ -128,14 +128,64 @@ func (s *InteractiveSession) displayAllItems(allItems []ActionableItem) {
 		fmt.Println()
 	}
 
-	// Display new findings section
+	// Display new findings section with descriptions and code snippets
 	if len(allItems) > trackedCount {
 		fmt.Println("📋 NEW FINDINGS")
 		fmt.Println()
 		for i, item := range allItems {
 			if !item.IsExisting {
+				itemNum := i + 1
 				emoji := findings.SeverityEmoji(item.Finding.Severity)
-				fmt.Printf("%d. %s %s\n", i+1, emoji, item.Finding.Title)
+				title := item.Finding.Title
+				files := strings.Join(item.Finding.Files, ", ")
+				
+				fmt.Printf("%d. %s %s\n", itemNum, emoji, title)
+				
+				if !item.IsExisting && files != "" {
+					fmt.Printf("   Files: %s\n", files)
+				}
+				
+				// Show truncated description (150 chars max)
+				if item.Finding.Description != "" {
+					desc := item.Finding.Description
+					if len(desc) > 150 {
+						desc = desc[:150] + "..."
+					}
+					fmt.Printf("   Description: %s\n", desc)
+				}
+				
+				// Show first code snippet if available (truncated)
+				if len(item.Finding.CodeSnippets) > 0 {
+					snippet := item.Finding.CodeSnippets[0]
+					header := fmt.Sprintf("   Code (%s", snippet.File)
+					if snippet.StartLine > 0 {
+						if snippet.EndLine > 0 && snippet.EndLine != snippet.StartLine {
+							header += fmt.Sprintf(":%d-%d", snippet.StartLine, snippet.EndLine)
+						} else {
+							header += fmt.Sprintf(":%d", snippet.StartLine)
+						}
+					}
+					header += "):"
+					fmt.Println(header)
+					
+					// Truncate code to max 10 lines
+					lines := strings.Split(snippet.Code, "\n")
+					maxLines := 10
+					if len(lines) > maxLines {
+						lines = lines[:maxLines]
+					}
+					
+					fmt.Println("   ```")
+					for _, line := range lines {
+						fmt.Printf("   %s\n", line)
+					}
+					if len(strings.Split(snippet.Code, "\n")) > maxLines {
+						fmt.Println("   ... (truncated)")
+					}
+					fmt.Println("   ```")
+				}
+				
+				fmt.Println()
 			}
 		}
 	}

@@ -7,32 +7,35 @@ import (
 
 // DisplayOptions controls how findings are displayed
 type DisplayOptions struct {
-	ShowCategory    bool
-	ShowDescription bool
-	TruncateDesc    int
-	ShowAll         bool
-	MaxDisplay      int
+	ShowCategory     bool
+	ShowDescription  bool
+	ShowCodeSnippets bool
+	TruncateDesc     int
+	ShowAll          bool
+	MaxDisplay       int
 }
 
 // DefaultDisplayOptions returns default display settings
 func DefaultDisplayOptions() DisplayOptions {
 	return DisplayOptions{
-		ShowCategory:    false,
-		ShowDescription: false,
-		TruncateDesc:    0,
-		ShowAll:         false,
-		MaxDisplay:      5,
+		ShowCategory:     false,
+		ShowDescription:  false,
+		ShowCodeSnippets: false,
+		TruncateDesc:     0,
+		ShowAll:          false,
+		MaxDisplay:       5,
 	}
 }
 
 // DetailedDisplayOptions returns settings for detailed display
 func DetailedDisplayOptions() DisplayOptions {
 	return DisplayOptions{
-		ShowCategory:    true,
-		ShowDescription: true,
-		TruncateDesc:    150,
-		ShowAll:         true,
-		MaxDisplay:      0,
+		ShowCategory:     true,
+		ShowDescription:  true,
+		ShowCodeSnippets: true,
+		TruncateDesc:     150,
+		ShowAll:          true,
+		MaxDisplay:       0,
 	}
 }
 
@@ -60,6 +63,10 @@ func DisplayFindings(findings []Finding, opts DisplayOptions) {
 				desc = desc[:opts.TruncateDesc] + "..."
 			}
 			fmt.Printf("   Description: %s\n", desc)
+		}
+		
+		if opts.ShowCodeSnippets && len(f.CodeSnippets) > 0 {
+			displayCodeSnippets(f.CodeSnippets)
 		}
 		
 		if opts.ShowAll {
@@ -111,4 +118,29 @@ func SeverityEmoji(severity string) string {
 // joinFiles joins file paths with commas
 func joinFiles(files []string) string {
 	return strings.Join(files, ", ")
+}
+
+// displayCodeSnippets displays code snippets with proper formatting
+func displayCodeSnippets(snippets []CodeSnippet) {
+	for _, snippet := range snippets {
+		// Format the header with file and line numbers
+		header := fmt.Sprintf("   Code (%s", snippet.File)
+		if snippet.StartLine > 0 {
+			if snippet.EndLine > 0 && snippet.EndLine != snippet.StartLine {
+				header += fmt.Sprintf(":%d-%d", snippet.StartLine, snippet.EndLine)
+			} else {
+				header += fmt.Sprintf(":%d", snippet.StartLine)
+			}
+		}
+		header += "):"
+		fmt.Println(header)
+		
+		// Display the code with indentation
+		fmt.Println("   ```")
+		lines := strings.Split(snippet.Code, "\n")
+		for _, line := range lines {
+			fmt.Printf("   %s\n", line)
+		}
+		fmt.Println("   ```")
+	}
 }

@@ -2,14 +2,23 @@ package findings
 
 import "time"
 
+// CodeSnippet represents a piece of code related to a finding
+type CodeSnippet struct {
+	File      string `json:"file"`
+	StartLine int    `json:"start_line,omitempty"`
+	EndLine   int    `json:"end_line,omitempty"`
+	Code      string `json:"code"`
+}
+
 // Finding represents a single issue discovered during analysis
 type Finding struct {
-	Category       string   `json:"category"`
-	Title          string   `json:"title"`
-	Severity       string   `json:"severity"`
-	Description    string   `json:"description"`
-	Recommendation string   `json:"recommendation"`
-	Files          []string `json:"files"`
+	Category       string        `json:"category"`
+	Title          string        `json:"title"`
+	Severity       string        `json:"severity"`
+	Description    string        `json:"description"`
+	Recommendation string        `json:"recommendation"`
+	Files          []string      `json:"files"`
+	CodeSnippets   []CodeSnippet `json:"code_snippets,omitempty"`
 }
 
 // Severity levels
