@@ -35,13 +35,14 @@ PIPELINE FOCUS AREAS:
 - Artifact management: Missing retention policies, oversized artifacts
 
 Format:
-[{"category": "pipeline", "title": "string", "severity": "high|medium|low", "description": "string", "recommendation": "string", "files": ["path/to/file"]}]
+[{"category": "pipeline", "title": "string", "severity": "high|medium|low", "description": "string", "recommendation": "string", "files": ["path/to/file"], "code_snippets": [{"file": "path/to/file", "start_line": 10, "end_line": 20, "code": "snippet text"}]}]
 
 Rules:
 - category: Must be "pipeline"
 - severity: high, medium, or low (lowercase)
 - title: concise, under 80 chars
 - files: relative paths from repo root
+- code_snippets: Optional but recommended. Include up to 2 concise snippets per finding that show the problem. Each snippet should include file, start_line, end_line, and the exact code. Keep each snippet under 20 lines and escape backticks if present.
 - Focus ONLY on CI/CD pipeline issues
 - Skip issues documented as TODOs` + a.ExistingContext + a.ExtraContext
 
