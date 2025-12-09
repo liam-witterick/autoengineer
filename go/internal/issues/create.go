@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/liam-witterick/autoengineer/go/internal/findings"
@@ -363,34 +365,21 @@ func formatIssueBody(finding findings.Finding) string {
 // detectLanguage detects the programming language from a file extension
 func detectLanguage(filename string) string {
 	// Check for special filenames without extensions first
-	// Extract basename
-	basename := filename
-	for i := len(filename) - 1; i >= 0; i-- {
-		if filename[i] == '/' || filename[i] == '\\' {
-			basename = filename[i+1:]
-			break
-		}
-	}
+	basename := filepath.Base(filename)
 	
 	// Check for special filenames
-	if basename == "Dockerfile" || basename == "Dockerfile.dev" || basename == "Dockerfile.prod" {
+	if basename == "Dockerfile" || strings.HasPrefix(basename, "Dockerfile.") {
 		return "dockerfile"
 	}
 	
 	// Extract file extension
-	lastDot := -1
-	for i := len(filename) - 1; i >= 0; i-- {
-		if filename[i] == '.' {
-			lastDot = i
-			break
-		}
-	}
-	
-	if lastDot == -1 {
+	ext := filepath.Ext(filename)
+	if ext == "" {
 		return ""
 	}
 	
-	ext := filename[lastDot+1:]
+	// Remove the leading dot
+	ext = strings.TrimPrefix(ext, ".")
 	
 	// Map common extensions to language identifiers
 	languageMap := map[string]string{
