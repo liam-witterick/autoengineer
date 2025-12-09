@@ -3,7 +3,7 @@
 
 set -e
 
-VERSION="2.4.3"
+VERSION="2.4.4"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 GITHUB_REPO="liam-witterick/autoengineer"
 BINARY_NAME="autoengineer"
