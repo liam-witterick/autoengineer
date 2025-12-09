@@ -362,6 +362,21 @@ func formatIssueBody(finding findings.Finding) string {
 
 // detectLanguage detects the programming language from a file extension
 func detectLanguage(filename string) string {
+	// Check for special filenames without extensions first
+	// Extract basename
+	basename := filename
+	for i := len(filename) - 1; i >= 0; i-- {
+		if filename[i] == '/' || filename[i] == '\\' {
+			basename = filename[i+1:]
+			break
+		}
+	}
+	
+	// Check for special filenames
+	if basename == "Dockerfile" || basename == "Dockerfile.dev" || basename == "Dockerfile.prod" {
+		return "dockerfile"
+	}
+	
 	// Extract file extension
 	lastDot := -1
 	for i := len(filename) - 1; i >= 0; i-- {
@@ -379,27 +394,26 @@ func detectLanguage(filename string) string {
 	
 	// Map common extensions to language identifiers
 	languageMap := map[string]string{
-		"tf":         "hcl",
-		"hcl":        "hcl",
-		"go":         "go",
-		"py":         "python",
-		"js":         "javascript",
-		"ts":         "typescript",
-		"yaml":       "yaml",
-		"yml":        "yaml",
-		"json":       "json",
-		"sh":         "bash",
-		"bash":       "bash",
-		"Dockerfile": "dockerfile",
-		"java":       "java",
-		"c":          "c",
-		"cpp":        "cpp",
-		"cs":         "csharp",
-		"rb":         "ruby",
-		"php":        "php",
-		"rs":         "rust",
-		"kt":         "kotlin",
-		"swift":      "swift",
+		"tf":    "hcl",
+		"hcl":   "hcl",
+		"go":    "go",
+		"py":    "python",
+		"js":    "javascript",
+		"ts":    "typescript",
+		"yaml":  "yaml",
+		"yml":   "yaml",
+		"json":  "json",
+		"sh":    "bash",
+		"bash":  "bash",
+		"java":  "java",
+		"c":     "c",
+		"cpp":   "cpp",
+		"cs":    "csharp",
+		"rb":    "ruby",
+		"php":   "php",
+		"rs":    "rust",
+		"kt":    "kotlin",
+		"swift": "swift",
 	}
 	
 	if lang, ok := languageMap[ext]; ok {

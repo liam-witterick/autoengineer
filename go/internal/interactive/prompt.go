@@ -141,7 +141,7 @@ func (s *InteractiveSession) displayAllItems(allItems []ActionableItem) {
 				
 				fmt.Printf("%d. %s %s\n", itemNum, emoji, title)
 				
-				if !item.IsExisting && files != "" {
+				if files != "" {
 					fmt.Printf("   Files: %s\n", files)
 				}
 				
