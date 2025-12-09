@@ -329,11 +329,34 @@ ignore_patterns:
 | `--create-issues` | Automatically create GitHub Issues for findings |
 | `--delegate` | Delegate fixes to Copilot Coding Agent (requires `--create-issues`) |
 | `--min-severity <level>` | Only action findings at this level or above: `low`, `medium`, `high` |
+| `--output <path>` | Save findings to specified file (default: `./findings.json`) |
+| `--use-existing-findings` | Load findings from file instead of running a new scan |
 | `--instructions <path>` | Path to custom instructions file (overrides `.github/copilot-instructions.md`) |
 | `--instructions-text <text>` | Custom instructions as text (overrides file-based instructions) |
 | `--no-scanners` | Skip external scanner integration |
 | `--fast` | Fast mode - skip scanners (alias for `--no-scanners`) |
 | `--check` | Verify dependencies and show scanner status |
+
+### Reusing Findings
+
+Save time by reusing previously saved findings instead of running a new scan:
+
+```bash
+# Run scan and save findings
+autoengineer --output ./my-scans/results.json
+
+# Later, resume with those findings
+autoengineer --use-existing-findings --output ./my-scans/results.json
+
+# Or use default location
+autoengineer --use-existing-findings  # loads from findings.json
+
+# Combine with other flags
+autoengineer --use-existing-findings --min-severity high
+autoengineer --use-existing-findings --create-issues
+```
+
+**Note:** When using `--use-existing-findings`, AutoEngineer still fetches existing tracked issues from GitHub to show both saved findings and tracked issues in the session.
 
 ---
 
