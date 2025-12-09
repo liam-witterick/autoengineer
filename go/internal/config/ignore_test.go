@@ -32,7 +32,7 @@ func TestLoadIgnoreConfig(t *testing.T) {
 	t.Run("valid config file", func(t *testing.T) {
 		configContent := `
 accepted:
-  - id: "SEC-abc123"
+  - title: "Security issue in production"
     reason: "Legacy system"
     accepted_by: "security-team"
     accepted_date: "2025-01-15"
@@ -61,8 +61,8 @@ disabled_scopes:
 		if len(cfg.Accepted) != 1 {
 			t.Errorf("expected 1 accepted item, got %d", len(cfg.Accepted))
 		}
-		if cfg.Accepted[0].ID != "SEC-abc123" {
-			t.Errorf("expected ID SEC-abc123, got %s", cfg.Accepted[0].ID)
+		if cfg.Accepted[0].Title != "Security issue in production" {
+			t.Errorf("expected title 'Security issue in production', got %s", cfg.Accepted[0].Title)
 		}
 
 		if len(cfg.IgnorePaths) != 2 {
@@ -79,23 +79,23 @@ disabled_scopes:
 	})
 }
 
-func TestGetAcceptedIDs(t *testing.T) {
+func TestGetAcceptedTitles(t *testing.T) {
 	cfg := &IgnoreConfig{
 		Accepted: []AcceptedItem{
-			{ID: "SEC-123"},
-			{ID: "PIPE-456"},
+			{Title: "Security issue in production"},
+			{Title: "Pipeline optimization needed"},
 		},
 	}
 
-	ids := cfg.GetAcceptedIDs()
-	if len(ids) != 2 {
-		t.Errorf("expected 2 IDs, got %d", len(ids))
+	titles := cfg.GetAcceptedTitles()
+	if len(titles) != 2 {
+		t.Errorf("expected 2 titles, got %d", len(titles))
 	}
-	if !ids["SEC-123"] {
-		t.Error("expected SEC-123 to be in accepted IDs")
+	if !titles["Security issue in production"] {
+		t.Error("expected 'Security issue in production' to be in accepted titles")
 	}
-	if !ids["PIPE-456"] {
-		t.Error("expected PIPE-456 to be in accepted IDs")
+	if !titles["Pipeline optimization needed"] {
+		t.Error("expected 'Pipeline optimization needed' to be in accepted titles")
 	}
 }
 

@@ -3,11 +3,11 @@
 
 # Accepted risks - findings we've reviewed and accepted
 accepted:
-  - id: "SEC-a1b2c3d4"
+  - title: "Security issue in production environment configuration"
     reason: "Legacy system, scheduled for decommission Q2"
     accepted_by: "security-team"
     accepted_date: "2025-01-15"
-  - id: "INFRA-x9y8z7w6"
+  - title: "Infrastructure uses public subnets"
     reason: "Intentional for dev environment"
     accepted_by: "platform-team"
     accepted_date: "2025-01-10"

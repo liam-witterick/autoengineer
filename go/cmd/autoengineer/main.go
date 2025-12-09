@@ -744,7 +744,7 @@ func createIssuesAuto(ctx context.Context, allFindings []findings.Finding) ([]in
 	for _, finding := range allFindings {
 		// Check if issue exists
 		if !flagForce {
-			exists, matchType, err := client.IssueExists(ctx, finding.ID, finding.Title)
+			exists, matchType, err := client.IssueExists(ctx, finding.Title)
 			if err != nil {
 				fmt.Printf("⚠️  Warning: failed to check for existing issue: %v\n", err)
 			}
@@ -763,7 +763,7 @@ func createIssuesAuto(ctx context.Context, allFindings []findings.Finding) ([]in
 			continue
 		}
 
-		fmt.Printf("   ✅ Created [%s] #%d\n", finding.ID, issueNum)
+		fmt.Printf("   ✅ Created #%d\n", issueNum)
 		created++
 		issueNums = append(issueNums, issueNum)
 	}

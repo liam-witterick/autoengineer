@@ -78,7 +78,6 @@ func TestDisplaySummary(t *testing.T) {
 func TestDisplayFindings(t *testing.T) {
 	findings := []Finding{
 		{
-			ID:          "SEC-001",
 			Title:       "Test Security Finding",
 			Severity:    SeverityHigh,
 			Category:    CategorySecurity,
@@ -86,7 +85,6 @@ func TestDisplayFindings(t *testing.T) {
 			Description: "This is a test security issue",
 		},
 		{
-			ID:          "PIPE-002",
 			Title:       "Test Pipeline Finding",
 			Severity:    SeverityMedium,
 			Category:    CategoryPipeline,
@@ -111,9 +109,6 @@ func TestDisplayFindings(t *testing.T) {
 		output := buf.String()
 
 		// Should show findings
-		if !strings.Contains(output, "SEC-001") {
-			t.Error("DisplayFindings() should show finding IDs")
-		}
 		if !strings.Contains(output, "Test Security Finding") {
 			t.Error("DisplayFindings() should show finding titles")
 		}

@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/liam-witterick/autoengineer/go/internal/analysis"
 	"github.com/liam-witterick/autoengineer/go/internal/findings"
 )
 
@@ -140,10 +139,6 @@ func (s *CheckovScanner) parseResults(output []byte, scope string) ([]findings.F
 			Severity:    mapCheckovSeverity(check.CheckID),
 			Category:    findings.CategorySecurity,
 		}
-		
-		// Generate ID based on scope
-		prefix := findings.PrefixSecurity
-		finding.ID = analysis.GenerateID(prefix, finding.Title, finding.Files)
 		
 		results = append(results, finding)
 	}

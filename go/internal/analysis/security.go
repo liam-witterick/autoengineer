@@ -34,10 +34,9 @@ SECURITY FOCUS AREAS:
 - Compliance gaps: Missing audit logging, untagged resources
 
 Format:
-[{"id": "SEC-xxxxx", "category": "security", "title": "string", "severity": "high|medium|low", "description": "string", "recommendation": "string", "files": ["path/to/file"]}]
+[{"category": "security", "title": "string", "severity": "high|medium|low", "description": "string", "recommendation": "string", "files": ["path/to/file"]}]
 
 Rules:
-- id: Must start with "SEC-" followed by unique identifier
 - category: Must be "security"
 - severity: high, medium, or low (lowercase)
 - title: concise, under 80 chars
@@ -50,11 +49,8 @@ Rules:
 		return nil, err
 	}
 
-	// Ensure all findings have IDs and correct category
+	// Ensure correct category
 	for i := range results {
-		if results[i].ID == "" {
-			results[i].ID = GenerateID(findings.PrefixSecurity, results[i].Title, results[i].Files)
-		}
 		results[i].Category = findings.CategorySecurity
 	}
 

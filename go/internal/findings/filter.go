@@ -8,11 +8,11 @@ import (
 
 // Filter filters findings based on ignore configuration
 func Filter(findings []Finding, cfg *config.IgnoreConfig) (filtered []Finding, ignoredCount int) {
-	acceptedIDs := cfg.GetAcceptedIDs()
+	acceptedTitles := cfg.GetAcceptedTitles()
 	filtered = make([]Finding, 0, len(findings))
 
 	for _, finding := range findings {
-		if shouldIgnore(finding, cfg, acceptedIDs) {
+		if shouldIgnore(finding, cfg, acceptedTitles) {
 			ignoredCount++
 			continue
 		}
@@ -60,9 +60,9 @@ func ValidateSeverity(severity string) bool {
 }
 
 // shouldIgnore determines if a finding should be ignored based on config
-func shouldIgnore(finding Finding, cfg *config.IgnoreConfig, acceptedIDs map[string]bool) bool {
-	// Check if ID is in accepted list
-	if acceptedIDs[finding.ID] {
+func shouldIgnore(finding Finding, cfg *config.IgnoreConfig, acceptedTitles map[string]bool) bool {
+	// Check if title is in accepted list
+	if acceptedTitles[finding.Title] {
 		return true
 	}
 

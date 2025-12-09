@@ -9,28 +9,24 @@ import (
 func TestFilter(t *testing.T) {
 	findings := []Finding{
 		{
-			ID:       "SEC-001",
 			Title:    "Security issue in production",
 			Category: CategorySecurity,
 			Severity: SeverityHigh,
 			Files:    []string{"main.tf"},
 		},
 		{
-			ID:       "SEC-002",
 			Title:    "Test security issue in sandbox",
 			Category: CategorySecurity,
 			Severity: SeverityLow,
 			Files:    []string{"test/main.tf"},
 		},
 		{
-			ID:       "PIPE-001",
 			Title:    "Pipeline optimization",
 			Category: CategoryPipeline,
 			Severity: SeverityMedium,
 			Files:    []string{".github/workflows/ci.yaml"},
 		},
 		{
-			ID:       "SEC-003",
 			Title:    "Example security config",
 			Category: CategorySecurity,
 			Severity: SeverityLow,
@@ -40,7 +36,7 @@ func TestFilter(t *testing.T) {
 
 	cfg := &config.IgnoreConfig{
 		Accepted: []config.AcceptedItem{
-			{ID: "SEC-001"},
+			{Title: "Security issue in production"},
 		},
 		IgnorePaths: []string{
 			"examples/*",
@@ -52,7 +48,7 @@ func TestFilter(t *testing.T) {
 
 	filtered, ignoredCount := Filter(findings, cfg)
 
-	// Should filter out: SEC-001 (accepted), SEC-002 (sandbox pattern), SEC-003 (examples path)
+	// Should filter out: "Security issue in production" (accepted), "Test security issue in sandbox" (sandbox pattern), "Example security config" (examples path)
 	if ignoredCount != 3 {
 		t.Errorf("expected 3 ignored findings, got %d", ignoredCount)
 	}
@@ -61,15 +57,15 @@ func TestFilter(t *testing.T) {
 		t.Errorf("expected 1 filtered finding, got %d", len(filtered))
 	}
 
-	if len(filtered) > 0 && filtered[0].ID != "PIPE-001" {
-		t.Errorf("expected PIPE-001 to remain, got %s", filtered[0].ID)
+	if len(filtered) > 0 && filtered[0].Title != "Pipeline optimization" {
+		t.Errorf("expected Pipeline optimization to remain, got %s", filtered[0].Title)
 	}
 }
 
 func TestShouldIgnore(t *testing.T) {
 	cfg := &config.IgnoreConfig{
 		Accepted: []config.AcceptedItem{
-			{ID: "SEC-001"},
+			{Title: "Some issue"},
 		},
 		IgnorePaths: []string{
 			"examples/*",
@@ -79,7 +75,7 @@ func TestShouldIgnore(t *testing.T) {
 			"demo*",
 		},
 	}
-	acceptedIDs := cfg.GetAcceptedIDs()
+	acceptedTitles := cfg.GetAcceptedTitles()
 
 	tests := []struct {
 		name     string
@@ -87,9 +83,8 @@ func TestShouldIgnore(t *testing.T) {
 		expected bool
 	}{
 		{
-			name: "accepted ID",
+			name: "accepted title",
 			finding: Finding{
-				ID:    "SEC-001",
 				Title: "Some issue",
 				Files: []string{"main.tf"},
 			},
@@ -98,7 +93,6 @@ func TestShouldIgnore(t *testing.T) {
 		{
 			name: "matches ignore pattern",
 			finding: Finding{
-				ID:    "SEC-002",
 				Title: "Test security issue",
 				Files: []string{"main.tf"},
 			},
@@ -107,7 +101,6 @@ func TestShouldIgnore(t *testing.T) {
 		{
 			name: "matches ignore path",
 			finding: Finding{
-				ID:    "SEC-003",
 				Title: "Security config",
 				Files: []string{"examples/config.tf"},
 			},
@@ -116,7 +109,6 @@ func TestShouldIgnore(t *testing.T) {
 		{
 			name: "should not ignore",
 			finding: Finding{
-				ID:    "SEC-004",
 				Title: "Production security issue",
 				Files: []string{"main.tf"},
 			},
@@ -126,7 +118,7 @@ func TestShouldIgnore(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := shouldIgnore(tt.finding, cfg, acceptedIDs)
+			result := shouldIgnore(tt.finding, cfg, acceptedTitles)
 			if result != tt.expected {
 				t.Errorf("expected %v, got %v", tt.expected, result)
 			}
@@ -137,22 +129,18 @@ func TestShouldIgnore(t *testing.T) {
 func TestFilterBySeverity(t *testing.T) {
 	findings := []Finding{
 		{
-			ID:       "SEC-001",
 			Title:    "Critical security issue",
 			Severity: SeverityHigh,
 		},
 		{
-			ID:       "SEC-002",
 			Title:    "Medium security issue",
 			Severity: SeverityMedium,
 		},
 		{
-			ID:       "PIPE-001",
 			Title:    "Low priority optimization",
 			Severity: SeverityLow,
 		},
 		{
-			ID:       "INFRA-001",
 			Title:    "Another high priority issue",
 			Severity: SeverityHigh,
 		},
@@ -162,37 +150,37 @@ func TestFilterBySeverity(t *testing.T) {
 		name             string
 		minSeverity      string
 		expectedCount    int
-		expectedIDs      []string
+		expectedTitles   []string
 	}{
 		{
 			name:          "low severity includes all",
 			minSeverity:   SeverityLow,
 			expectedCount: 4,
-			expectedIDs:   []string{"SEC-001", "SEC-002", "PIPE-001", "INFRA-001"},
+			expectedTitles:   []string{"Critical security issue", "Medium security issue", "Low priority optimization", "Another high priority issue"},
 		},
 		{
 			name:          "medium severity filters out low",
 			minSeverity:   SeverityMedium,
 			expectedCount: 3,
-			expectedIDs:   []string{"SEC-001", "SEC-002", "INFRA-001"},
+			expectedTitles:   []string{"Critical security issue", "Medium security issue", "Another high priority issue"},
 		},
 		{
 			name:          "high severity filters out medium and low",
 			minSeverity:   SeverityHigh,
 			expectedCount: 2,
-			expectedIDs:   []string{"SEC-001", "INFRA-001"},
+			expectedTitles:   []string{"Critical security issue", "Another high priority issue"},
 		},
 		{
 			name:          "empty min severity includes all",
 			minSeverity:   "",
 			expectedCount: 4,
-			expectedIDs:   []string{"SEC-001", "SEC-002", "PIPE-001", "INFRA-001"},
+			expectedTitles:   []string{"Critical security issue", "Medium security issue", "Low priority optimization", "Another high priority issue"},
 		},
 		{
 			name:          "invalid severity includes all (safe fallback)",
 			minSeverity:   "invalid",
 			expectedCount: 4,
-			expectedIDs:   []string{"SEC-001", "SEC-002", "PIPE-001", "INFRA-001"},
+			expectedTitles:   []string{"Critical security issue", "Medium security issue", "Low priority optimization", "Another high priority issue"},
 		},
 	}
 
@@ -204,15 +192,15 @@ func TestFilterBySeverity(t *testing.T) {
 				t.Errorf("expected %d findings, got %d", tt.expectedCount, len(result))
 			}
 			
-			// Check that the expected IDs are present
-			resultIDs := make(map[string]bool)
+			// Check that the expected titles are present
+			resultTitles := make(map[string]bool)
 			for _, f := range result {
-				resultIDs[f.ID] = true
+				resultTitles[f.Title] = true
 			}
 			
-			for _, expectedID := range tt.expectedIDs {
-				if !resultIDs[expectedID] {
-					t.Errorf("expected finding %s to be present", expectedID)
+			for _, expectedTitle := range tt.expectedTitles {
+				if !resultTitles[expectedTitle] {
+					t.Errorf("expected finding %s to be present", expectedTitle)
 				}
 			}
 		})

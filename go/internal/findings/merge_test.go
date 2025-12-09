@@ -7,14 +7,12 @@ import (
 func TestMerge(t *testing.T) {
 	findings1 := []Finding{
 		{
-			ID:          "SEC-001",
 			Title:       "Security issue in production environment configuration is insecure",
 			Description: "Production configuration lacks proper security settings",
 			Severity:    SeverityHigh,
 			Category:    CategorySecurity,
 		},
 		{
-			ID:       "SEC-002",
 			Title:    "Security issue B",
 			Severity: SeverityLow,
 			Category: CategorySecurity,
@@ -23,13 +21,11 @@ func TestMerge(t *testing.T) {
 
 	findings2 := []Finding{
 		{
-			ID:       "PIPE-001",
 			Title:    "Pipeline issue",
 			Severity: SeverityMedium,
 			Category: CategoryPipeline,
 		},
 		{
-			ID:          "SEC-003",
 			Title:       "Security issue in production environment configuration needs review",
 			Description: "Production configuration requires security review and hardening",
 			Severity:    SeverityHigh,
@@ -39,7 +35,7 @@ func TestMerge(t *testing.T) {
 
 	merged := Merge(findings1, findings2)
 
-	// SEC-001 and SEC-003 should merge (similar titles and descriptions, same category)
+	// First and fourth findings should merge (similar titles and descriptions, same category)
 	// Result: 1 merged security finding + 1 other security finding + 1 pipeline = 3
 	if len(merged) != 3 {
 		t.Errorf("expected 3 findings after merge, got %d", len(merged))
@@ -56,9 +52,9 @@ func TestMerge(t *testing.T) {
 
 func TestDeduplicate(t *testing.T) {
 	findings := []Finding{
-		{ID: "SEC-001", Title: "Security issue in production environment configuration is insecure", Category: CategorySecurity},
-		{ID: "SEC-002", Title: "Security issue in production environment configuration needs fix", Category: CategorySecurity}, // Similar title
-		{ID: "PIPE-001", Title: "Pipeline optimization needed", Category: CategoryPipeline},
+		{Title: "Security issue in production environment configuration is insecure", Category: CategorySecurity},
+		{Title: "Security issue in production environment configuration needs fix", Category: CategorySecurity}, // Similar title
+		{Title: "Pipeline optimization needed", Category: CategoryPipeline},
 	}
 
 	result := deduplicate(findings)
@@ -113,9 +109,9 @@ func TestCountByCategory(t *testing.T) {
 
 func TestBySeverity(t *testing.T) {
 	findings := []Finding{
-		{ID: "1", Severity: SeverityLow},
-		{ID: "2", Severity: SeverityHigh},
-		{ID: "3", Severity: SeverityMedium},
+		{Title: "Low issue", Severity: SeverityLow},
+		{Title: "High issue", Severity: SeverityHigh},
+		{Title: "Medium issue", Severity: SeverityMedium},
 	}
 
 	// Test the sort interface
@@ -134,7 +130,6 @@ func TestBySeverity(t *testing.T) {
 func TestSemanticGroupingAcrossFiles(t *testing.T) {
 	findings := []Finding{
 		{
-			ID:          "SEC-001",
 			Title:       "S3 bucket lacks encryption",
 			Description: "The S3 bucket does not have encryption enabled",
 			Files:       []string{"infra/storage.tf"},
@@ -142,7 +137,6 @@ func TestSemanticGroupingAcrossFiles(t *testing.T) {
 			Severity:    SeverityHigh,
 		},
 		{
-			ID:          "SEC-002",
 			Title:       "S3 bucket missing encryption",
 			Description: "Encryption is not configured for the S3 bucket",
 			Files:       []string{"infra/backup.tf"},
@@ -167,14 +161,12 @@ func TestSemanticGroupingAcrossFiles(t *testing.T) {
 func TestNoMergeDifferentCategories(t *testing.T) {
 	findings := []Finding{
 		{
-			ID:          "SEC-001",
 			Title:       "IAM role has wildcard permissions",
 			Description: "IAM role grants overly broad access",
 			Category:    CategorySecurity,
 			Severity:    SeverityHigh,
 		},
 		{
-			ID:          "PIPE-001",
 			Title:       "Missing CI/CD configuration",
 			Description: "Pipeline needs optimization",
 			Category:    CategoryPipeline,
@@ -194,7 +186,6 @@ func TestNoMergeDifferentCategories(t *testing.T) {
 func TestMergeDifferentCategoriesIfVerySimilar(t *testing.T) {
 	findings := []Finding{
 		{
-			ID:          "SEC-001",
 			Title:       "MSK cluster uses public subnets instead of private subnets",
 			Description: "The MSK cluster is configured with public subnets which poses a security risk",
 			Category:    CategorySecurity,
@@ -202,7 +193,6 @@ func TestMergeDifferentCategoriesIfVerySimilar(t *testing.T) {
 			Files:       []string{"kafka.tf"},
 		},
 		{
-			ID:          "INFRA-001",
 			Title:       "MSK uses public subnets instead of private subnets",
 			Description: "MSK cluster should use private subnets for better isolation",
 			Category:    CategoryInfra,
@@ -228,7 +218,6 @@ func TestMergeDifferentCategoriesIfVerySimilar(t *testing.T) {
 func TestMergeWithOverlappingFiles(t *testing.T) {
 	findings := []Finding{
 		{
-			ID:          "INFRA-001",
 			Title:       "Resources missing required tags",
 			Description: "Resources should have environment tags",
 			Files:       []string{"infra/main.tf", "infra/network.tf"},
@@ -236,7 +225,6 @@ func TestMergeWithOverlappingFiles(t *testing.T) {
 			Severity:    SeverityLow,
 		},
 		{
-			ID:          "INFRA-002",
 			Title:       "Resources missing required tags",
 			Description: "Resources need proper tagging",
 			Files:       []string{"infra/main.tf", "infra/compute.tf"},
@@ -262,14 +250,12 @@ func TestMergeWithOverlappingFiles(t *testing.T) {
 func TestNoMergeDissimilarFindings(t *testing.T) {
 	findings := []Finding{
 		{
-			ID:          "SEC-001",
 			Title:       "S3 bucket lacks encryption",
 			Description: "Encryption not enabled",
 			Category:    CategorySecurity,
 			Severity:    SeverityHigh,
 		},
 		{
-			ID:          "SEC-002",
 			Title:       "IAM role has wildcard permissions",
 			Description: "IAM role grants overly broad access",
 			Category:    CategorySecurity,
@@ -448,7 +434,6 @@ func TestCalculateFileOverlap(t *testing.T) {
 // Test merging preserves higher severity
 func TestMergePreservesHighSeverity(t *testing.T) {
 	high := Finding{
-		ID:          "SEC-001",
 		Title:       "Critical issue",
 		Severity:    SeverityHigh,
 		Category:    CategorySecurity,
@@ -457,7 +442,6 @@ func TestMergePreservesHighSeverity(t *testing.T) {
 	}
 
 	low := Finding{
-		ID:          "SEC-002",
 		Title:       "Critical issue",
 		Severity:    SeverityLow,
 		Category:    CategorySecurity,
@@ -474,9 +458,5 @@ func TestMergePreservesHighSeverity(t *testing.T) {
 
 	if result[0].Severity != SeverityHigh {
 		t.Errorf("merged finding should have high severity, got %s", result[0].Severity)
-	}
-
-	if result[0].ID != high.ID {
-		t.Errorf("merged finding should use ID from high severity finding")
 	}
 }

@@ -17,7 +17,7 @@ type IgnoreConfig struct {
 
 // AcceptedItem represents an accepted finding
 type AcceptedItem struct {
-	ID           string `yaml:"id"`
+	Title        string `yaml:"title"`
 	Reason       string `yaml:"reason,omitempty"`
 	AcceptedBy   string `yaml:"accepted_by,omitempty"`
 	AcceptedDate string `yaml:"accepted_date,omitempty"`
@@ -58,13 +58,13 @@ func LoadIgnoreConfig() (*IgnoreConfig, error) {
 	return &config, nil
 }
 
-// GetAcceptedIDs returns a map of accepted finding IDs for quick lookup
-func (c *IgnoreConfig) GetAcceptedIDs() map[string]bool {
-	ids := make(map[string]bool)
+// GetAcceptedTitles returns a map of accepted finding titles for quick lookup
+func (c *IgnoreConfig) GetAcceptedTitles() map[string]bool {
+	titles := make(map[string]bool)
 	for _, item := range c.Accepted {
-		ids[item.ID] = true
+		titles[item.Title] = true
 	}
-	return ids
+	return titles
 }
 
 // IsScopeDisabled checks if a scope is disabled

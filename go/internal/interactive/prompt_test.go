@@ -93,12 +93,10 @@ func TestParseSelection(t *testing.T) {
 func TestConvertFindingsToItems(t *testing.T) {
 	findings := []findings.Finding{
 		{
-			ID:       "SEC-001",
 			Title:    "Security issue 1",
 			Severity: findings.SeverityHigh,
 		},
 		{
-			ID:       "PIPE-002",
 			Title:    "Pipeline issue 1",
 			Severity: findings.SeverityMedium,
 		},
@@ -168,7 +166,6 @@ func TestSeverityEmoji(t *testing.T) {
 func TestHandlePreview(t *testing.T) {
 	findings := []findings.Finding{
 		{
-			ID:          "SEC-001",
 			Title:       "Security issue",
 			Severity:    findings.SeverityHigh,
 			Category:    findings.CategorySecurity,
@@ -176,7 +173,6 @@ func TestHandlePreview(t *testing.T) {
 			Description: "This is a test security issue",
 		},
 		{
-			ID:          "PIPE-002",
 			Title:       "Pipeline issue",
 			Severity:    findings.SeverityMedium,
 			Category:    findings.CategoryPipeline,
@@ -203,12 +199,10 @@ func TestGetAllItemsCombinesCorrectly(t *testing.T) {
 	// Test that getAllItems combines tracked issues and new findings in the right order
 	findings := []findings.Finding{
 		{
-			ID:       "SEC-001",
 			Title:    "Security issue",
 			Severity: findings.SeverityHigh,
 		},
 		{
-			ID:       "PIPE-002",
 			Title:    "Pipeline issue",
 			Severity: findings.SeverityMedium,
 		},
@@ -239,7 +233,6 @@ func TestGetAllItemsCombinesCorrectly(t *testing.T) {
 func TestActionableItem(t *testing.T) {
 	// Test ActionableItem with finding
 	finding := &findings.Finding{
-		ID:       "SEC-001",
 		Title:    "Test finding",
 		Severity: findings.SeverityHigh,
 	}
@@ -277,7 +270,6 @@ func TestActionableItem(t *testing.T) {
 
 func TestBuildLocalFixPrompt(t *testing.T) {
 	finding := findings.Finding{
-		ID:             "SEC-002",
 		Title:          "Example finding",
 		Description:    "A description of the issue",
 		Recommendation: "Follow best practices",
@@ -286,9 +278,6 @@ func TestBuildLocalFixPrompt(t *testing.T) {
 
 	prompt := buildLocalFixPrompt(ActionableItem{Finding: &finding})
 
-	if !strings.Contains(prompt, finding.ID) {
-		t.Errorf("prompt should include finding ID %q", finding.ID)
-	}
 	if !strings.Contains(prompt, finding.Title) {
 		t.Errorf("prompt should include finding title %q", finding.Title)
 	}

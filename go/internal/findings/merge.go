@@ -298,7 +298,6 @@ func mergeFindings(a, b Finding) Finding {
 	}
 
 	return Finding{
-		ID:             base.ID, // Keep the ID of the higher severity finding
 		Category:       base.Category,
 		Title:          base.Title,
 		Severity:       base.Severity,

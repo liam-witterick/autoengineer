@@ -20,7 +20,6 @@ func TestBuildDeduplicationPrompt(t *testing.T) {
 			name: "with findings and existing issues",
 			newFindings: []findings.Finding{
 				{
-					ID:          "SEC-001",
 					Title:       "S3 bucket lacks encryption",
 					Category:    findings.CategorySecurity,
 					Severity:    findings.SeverityHigh,
@@ -28,7 +27,6 @@ func TestBuildDeduplicationPrompt(t *testing.T) {
 					Files:       []string{"storage.tf"},
 				},
 				{
-					ID:          "INFRA-002",
 					Title:       "MSK uses public subnets",
 					Category:    findings.CategoryInfra,
 					Severity:    findings.SeverityMedium,
@@ -47,9 +45,7 @@ func TestBuildDeduplicationPrompt(t *testing.T) {
 				"Issue #43",
 				"Restrict MSK Security Group CIDR Blocks",
 				"NEW FINDINGS TO DEDUPLICATE",
-				"SEC-001",
 				"S3 bucket lacks encryption",
-				"INFRA-002",
 				"MSK uses public subnets",
 				"INSTRUCTIONS",
 				"Merge findings that describe the same underlying issue",
@@ -62,7 +58,6 @@ func TestBuildDeduplicationPrompt(t *testing.T) {
 			name: "with findings only, no existing issues",
 			newFindings: []findings.Finding{
 				{
-					ID:       "PIPE-001",
 					Title:    "CI/CD pipeline needs optimization",
 					Category: findings.CategoryPipeline,
 					Severity: findings.SeverityLow,
@@ -71,7 +66,6 @@ func TestBuildDeduplicationPrompt(t *testing.T) {
 			existingIssues: []issues.SearchResult{},
 			wantContains: []string{
 				"NEW FINDINGS TO DEDUPLICATE",
-				"PIPE-001",
 				"CI/CD pipeline needs optimization",
 				"INSTRUCTIONS",
 			},
@@ -115,7 +109,6 @@ func TestBuildDeduplicationPrompt(t *testing.T) {
 func TestBuildDeduplicationPromptFormat(t *testing.T) {
 	newFindings := []findings.Finding{
 		{
-			ID:             "SEC-001",
 			Title:          "Security issue",
 			Category:       findings.CategorySecurity,
 			Severity:       findings.SeverityHigh,
@@ -128,9 +121,6 @@ func TestBuildDeduplicationPromptFormat(t *testing.T) {
 	prompt := buildDeduplicationPrompt(newFindings, []issues.SearchResult{})
 
 	// Check that prompt contains JSON structure
-	if !contains(prompt, `"id"`) {
-		t.Error("prompt should contain JSON id field")
-	}
 	if !contains(prompt, `"category"`) {
 		t.Error("prompt should contain JSON category field")
 	}
