@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/liam-witterick/autoengineer/go/internal/findings"
@@ -79,12 +80,10 @@ func TestLoadFindings_FileNotFound(t *testing.T) {
 		t.Fatal("expected error for non-existent file, got nil")
 	}
 
-	if !os.IsNotExist(err) {
-		// Check if error message contains expected text
-		expectedMsg := "findings file not found"
-		if err.Error()[:len(expectedMsg)] != expectedMsg {
-			t.Errorf("expected error message to start with '%s', got: %v", expectedMsg, err)
-		}
+	// Check if error message contains expected text
+	expectedMsg := "findings file not found"
+	if !strings.HasPrefix(err.Error(), expectedMsg) {
+		t.Errorf("expected error message to start with '%s', got: %v", expectedMsg, err)
 	}
 }
 
@@ -105,7 +104,7 @@ func TestLoadFindings_InvalidJSON(t *testing.T) {
 
 	// Check if error message contains expected text
 	expectedMsg := "failed to parse findings file"
-	if err.Error()[:len(expectedMsg)] != expectedMsg {
+	if !strings.HasPrefix(err.Error(), expectedMsg) {
 		t.Errorf("expected error message to start with '%s', got: %v", expectedMsg, err)
 	}
 }

@@ -259,6 +259,8 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Save findings to file (only when running new scan)
+	// We skip saving when using existing findings to avoid overwriting
+	// the original file with potentially filtered/modified results
 	if !flagUseExistingFindings {
 		if err := saveFindings(filtered, flagOutput); err != nil {
 			return fmt.Errorf("failed to save findings: %w", err)
