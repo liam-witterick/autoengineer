@@ -142,10 +142,9 @@ func (s *InteractiveSession) displayAllItems(allItems []ActionableItem) {
 		for i, item := range allItems {
 			if !item.IsExisting {
 				emoji := findings.SeverityEmoji(item.Finding.Severity)
-				title := item.Finding.Title
 				files := strings.Join(item.Finding.Files, ", ")
 				
-				fmt.Printf("%d. %s %s\n", i+1, emoji, title)
+				fmt.Printf("%d. %s %s\n", i+1, emoji, item.Finding.Title)
 				
 				if files != "" {
 					fmt.Printf("   Files: %s\n", files)
@@ -176,7 +175,8 @@ func (s *InteractiveSession) displayAllItems(allItems []ActionableItem) {
 					
 					// Truncate code to max lines
 					lines := strings.Split(snippet.Code, "\n")
-					if len(lines) > maxCodeSnippetLines {
+					originalLineCount := len(lines)
+					if originalLineCount > maxCodeSnippetLines {
 						lines = lines[:maxCodeSnippetLines]
 					}
 					
@@ -184,7 +184,7 @@ func (s *InteractiveSession) displayAllItems(allItems []ActionableItem) {
 					for _, line := range lines {
 						fmt.Printf("   %s\n", line)
 					}
-					if len(strings.Split(snippet.Code, "\n")) > maxCodeSnippetLines {
+					if originalLineCount > maxCodeSnippetLines {
 						fmt.Println("   ... (truncated)")
 					}
 					fmt.Println("   ```")
