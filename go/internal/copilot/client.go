@@ -176,12 +176,11 @@ func buildDeduplicationPrompt(newFindings []findings.Finding, existingIssues []i
 			}
 			// Marshal individual fields to ensure proper escaping
 			// json.Marshal for strings always succeeds, so we can ignore errors
-			idJSON, _ := json.Marshal(f.ID)
 			titleJSON, _ := json.Marshal(f.Title)
 			categoryJSON, _ := json.Marshal(f.Category)
 			severityJSON, _ := json.Marshal(f.Severity)
-			prompt.WriteString(fmt.Sprintf("  {\"id\": %s, \"title\": %s, \"category\": %s, \"severity\": %s}",
-				idJSON, titleJSON, categoryJSON, severityJSON))
+			prompt.WriteString(fmt.Sprintf("  {\"title\": %s, \"category\": %s, \"severity\": %s}",
+				titleJSON, categoryJSON, severityJSON))
 		}
 		prompt.WriteString("\n]\n\n")
 	} else {

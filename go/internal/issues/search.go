@@ -88,42 +88,6 @@ func (c *Client) IssueExists(ctx context.Context, title string) (bool, string, e
 	return false, "", nil
 }
 
-// SearchResult represents a search match
-type SearchResult struct {
-	Number int
-	Title  string
-	Body   string
-	Labels []string
-}
-
-// labelStruct is used for parsing label JSON responses
-type labelStruct struct {
-	Name string `json:"name"`
-}
-
-// extractLabelNames converts label structs to label name strings
-func extractLabelNames(labels []labelStruct) []string {
-	labelNames := make([]string, len(labels))
-	for i, label := range labels {
-		labelNames[i] = label.Name
-	}
-	return labelNames
-}
-
-// IssueExists checks if an issue exists by title
-func (c *Client) IssueExists(ctx context.Context, title string) (bool, string, error) {
-	// Search by title
-	result, err := c.FindByTitle(ctx, title)
-	if err != nil {
-		return false, "", err
-	}
-	if result != nil {
-		return true, "title", nil
-	}
-
-	return false, "", nil
-}
-
 // GetIssueLabels returns the labels for a specific issue
 func (c *Client) GetIssueLabels(ctx context.Context, issueNumber int) ([]string, error) {
 	var labels []labelStruct

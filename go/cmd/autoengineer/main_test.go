@@ -17,7 +17,6 @@ func TestSaveAndLoadFindings(t *testing.T) {
 	// Create test findings
 	testFindings := []findings.Finding{
 		{
-			ID:             "SEC-001",
 			Category:       "security",
 			Title:          "Test Security Finding",
 			Severity:       "high",
@@ -26,7 +25,6 @@ func TestSaveAndLoadFindings(t *testing.T) {
 			Files:          []string{"test.tf"},
 		},
 		{
-			ID:             "PIPE-001",
 			Category:       "pipeline",
 			Title:          "Test Pipeline Finding",
 			Severity:       "medium",
@@ -59,9 +57,6 @@ func TestSaveAndLoadFindings(t *testing.T) {
 	}
 
 	for i, finding := range loadedFindings {
-		if finding.ID != testFindings[i].ID {
-			t.Errorf("finding %d: expected ID %s, got %s", i, testFindings[i].ID, finding.ID)
-		}
 		if finding.Title != testFindings[i].Title {
 			t.Errorf("finding %d: expected Title %s, got %s", i, testFindings[i].Title, finding.Title)
 		}
