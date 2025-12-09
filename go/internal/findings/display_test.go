@@ -150,6 +150,73 @@ func TestDisplayFindings(t *testing.T) {
 	})
 }
 
+func TestDisplayFindingsWithCodeSnippets(t *testing.T) {
+	findings := []Finding{
+		{
+			Title:       "Test Security Finding",
+			Severity:    SeverityHigh,
+			Category:    CategorySecurity,
+			Files:       []string{"main.go"},
+			Description: "This is a test security issue",
+			CodeSnippets: []CodeSnippet{
+				{
+					File:      "main.go",
+					StartLine: 10,
+					EndLine:   15,
+					Code:      "func main() {\n    // vulnerable code\n}",
+				},
+			},
+		},
+	}
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	opts := DetailedDisplayOptions()
+	DisplayFindings(findings, opts)
+
+	w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	// Should show code snippet
+	if !strings.Contains(output, "Code (main.go:10-15):") {
+		t.Error("DisplayFindings() should show code snippet header")
+	}
+	if !strings.Contains(output, "func main()") {
+		t.Error("DisplayFindings() should show code snippet content")
+	}
+	if !strings.Contains(output, "```") {
+		t.Error("DisplayFindings() should show code fences")
+	}
+}
+
+func TestCodeSnippetValidation(t *testing.T) {
+	snippet := CodeSnippet{
+		File:      "test.go",
+		StartLine: 10,
+		EndLine:   15,
+		Code:      "example code",
+	}
+
+	if snippet.File != "test.go" {
+		t.Errorf("CodeSnippet.File = %q, want %q", snippet.File, "test.go")
+	}
+	if snippet.StartLine != 10 {
+		t.Errorf("CodeSnippet.StartLine = %d, want %d", snippet.StartLine, 10)
+	}
+	if snippet.EndLine != 15 {
+		t.Errorf("CodeSnippet.EndLine = %d, want %d", snippet.EndLine, 15)
+	}
+	if snippet.Code != "example code" {
+		t.Errorf("CodeSnippet.Code = %q, want %q", snippet.Code, "example code")
+	}
+}
+
 func TestDisplayOptions(t *testing.T) {
 	t.Run("default options", func(t *testing.T) {
 		opts := DefaultDisplayOptions()

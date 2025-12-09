@@ -13,6 +13,13 @@ import (
 	"github.com/liam-witterick/autoengineer/go/internal/issues"
 )
 
+const (
+	// maxDescriptionLength is the maximum number of characters to show in preview descriptions
+	maxDescriptionLength = 150
+	// maxCodeSnippetLines is the maximum number of lines to show for code snippets in preview
+	maxCodeSnippetLines = 10
+)
+
 // ActionableItem represents something that can be acted upon (finding or existing issue)
 type ActionableItem struct {
 	Finding    *findings.Finding
@@ -128,14 +135,62 @@ func (s *InteractiveSession) displayAllItems(allItems []ActionableItem) {
 		fmt.Println()
 	}
 
-	// Display new findings section
+	// Display new findings section with descriptions and code snippets
 	if len(allItems) > trackedCount {
 		fmt.Println("📋 NEW FINDINGS")
 		fmt.Println()
 		for i, item := range allItems {
 			if !item.IsExisting {
 				emoji := findings.SeverityEmoji(item.Finding.Severity)
+				files := strings.Join(item.Finding.Files, ", ")
+				
 				fmt.Printf("%d. %s %s\n", i+1, emoji, item.Finding.Title)
+				
+				if files != "" {
+					fmt.Printf("   Files: %s\n", files)
+				}
+				
+				// Show truncated description
+				if item.Finding.Description != "" {
+					desc := item.Finding.Description
+					if len(desc) > maxDescriptionLength {
+						desc = desc[:maxDescriptionLength] + "..."
+					}
+					fmt.Printf("   Description: %s\n", desc)
+				}
+				
+				// Show first code snippet if available (truncated)
+				if len(item.Finding.CodeSnippets) > 0 {
+					snippet := item.Finding.CodeSnippets[0]
+					header := fmt.Sprintf("   Code (%s", snippet.File)
+					if snippet.StartLine > 0 {
+						if snippet.EndLine > 0 && snippet.EndLine != snippet.StartLine {
+							header += fmt.Sprintf(":%d-%d", snippet.StartLine, snippet.EndLine)
+						} else {
+							header += fmt.Sprintf(":%d", snippet.StartLine)
+						}
+					}
+					header += "):"
+					fmt.Println(header)
+					
+					// Truncate code to max lines
+					lines := strings.Split(snippet.Code, "\n")
+					originalLineCount := len(lines)
+					if originalLineCount > maxCodeSnippetLines {
+						lines = lines[:maxCodeSnippetLines]
+					}
+					
+					fmt.Println("   ```")
+					for _, line := range lines {
+						fmt.Printf("   %s\n", line)
+					}
+					if originalLineCount > maxCodeSnippetLines {
+						fmt.Println("   ... (truncated)")
+					}
+					fmt.Println("   ```")
+				}
+				
+				fmt.Println()
 			}
 		}
 	}
