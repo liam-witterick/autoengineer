@@ -34,13 +34,14 @@ SECURITY FOCUS AREAS:
 - Compliance gaps: Missing audit logging, untagged resources
 
 Format:
-[{"category": "security", "title": "string", "severity": "high|medium|low", "description": "string", "recommendation": "string", "files": ["path/to/file"]}]
+[{"category": "security", "title": "string", "severity": "high|medium|low", "description": "string", "recommendation": "string", "files": ["path/to/file"], "code_snippets": [{"file": "path/to/file", "start_line": 10, "end_line": 20, "code": "snippet text"}]}]
 
 Rules:
 - category: Must be "security"
 - severity: high, medium, or low (lowercase)
 - title: concise, under 80 chars
 - files: relative paths from repo root
+- code_snippets: Optional but recommended. Include up to 2 concise snippets per finding that best illustrate the issue. Each snippet should specify file, start_line, end_line, and the exact code. Keep each snippet under 20 lines and escape backticks if present.
 - Focus ONLY on security issues
 - Skip issues documented as TODOs` + a.ExistingContext + a.ExtraContext
 
