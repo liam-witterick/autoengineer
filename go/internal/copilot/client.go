@@ -188,16 +188,18 @@ func buildDeduplicationPrompt(newFindings []findings.Finding, existingIssues []i
 		prompt.WriteString("\n\n")
 	}
 
-	// Add deduplication instructions
+	// Add deduplication instructions (now preserving code snippets)
 	prompt.WriteString("INSTRUCTIONS:\n")
 	prompt.WriteString("1. Merge findings that describe the same underlying issue, even if they're from different categories (security/pipeline/infra)\n")
 	prompt.WriteString("2. When merging, keep the finding with the highest severity and combine the file lists (remove duplicates)\n")
-	prompt.WriteString("3. Remove any findings that are duplicates or closely related to the existing tracked issues listed above\n")
-	prompt.WriteString("4. Keep the ID, category, and severity from the highest severity finding when merging\n")
-	prompt.WriteString("5. Combine descriptions and recommendations when merging, separating with '; '\n")
-	prompt.WriteString("6. Return ONLY the deduplicated findings as a JSON array in this exact format:\n")
+	prompt.WriteString("3. Preserve code_snippets from any merged finding; keep up to 2 per result.\n")
+	prompt.WriteString("4. Remove any findings that are duplicates or closely related to the existing tracked issues listed above\n")
+	prompt.WriteString("5. Keep the ID, category, and severity from the highest severity finding when merging\n")
+	prompt.WriteString("6. Combine descriptions and recommendations when merging, separating with '; '\n")
+	prompt.WriteString("7. Return ONLY the deduplicated findings as a JSON array in this exact format:\n")
 	prompt.WriteString("[{\"id\": \"string\", \"category\": \"string\", \"title\": \"string\", \"severity\": \"string\", ")
-	prompt.WriteString("\"description\": \"string\", \"recommendation\": \"string\", \"files\": [\"string\"]}]\n\n")
+	prompt.WriteString("\"description\": \"string\", \"recommendation\": \"string\", \"files\": [\"string\"], ")
+	prompt.WriteString("\"code_snippets\": [{\"file\": \"string\", \"start_line\": 0, \"end_line\": 0, \"code\": \"string\"}]}]\n\n")
 	prompt.WriteString("Output ONLY the JSON array with no explanation or markdown code blocks.\n")
 
 	return prompt.String()
