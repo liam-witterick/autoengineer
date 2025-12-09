@@ -304,7 +304,7 @@ Create `.github/autoengineer-ignore.yaml`:
 ```yaml
 # Accepted risks
 accepted:
-  - id: "SEC-a1b2c3d4"
+  - title: "Security issue in production environment"
     reason: "Legacy system, decommissioning Q2"
     accepted_by: "security-team"
 
