@@ -24,19 +24,20 @@ const (
 )
 
 var (
-	flagAuto             bool
-	flagCreateIssues     bool
-	flagDelegate         bool
-	flagMinSeverity      string
-	flagOutput           string
-	flagForce            bool
-	flagScope            string
-	flagCheck            bool
-	flagVersion          bool
-	flagNoScanners       bool
-	flagFast             bool
-	flagInstructions     string
-	flagInstructionsText string
+	flagAuto                 bool
+	flagCreateIssues         bool
+	flagDelegate             bool
+	flagMinSeverity          string
+	flagOutput               string
+	flagForce                bool
+	flagScope                string
+	flagCheck                bool
+	flagVersion              bool
+	flagNoScanners           bool
+	flagFast                 bool
+	flagInstructions         string
+	flagInstructionsText     string
+	flagUseExistingFindings  bool
 )
 
 func main() {
@@ -69,6 +70,7 @@ WORKFLOW:
 	rootCmd.Flags().BoolVar(&flagFast, "fast", false, "Fast mode - skip external scanners (alias for --no-scanners)")
 	rootCmd.Flags().StringVar(&flagInstructions, "instructions", "", "Path to custom instructions file")
 	rootCmd.Flags().StringVar(&flagInstructionsText, "instructions-text", "", "Custom instructions as text")
+	rootCmd.Flags().BoolVar(&flagUseExistingFindings, "use-existing-findings", false, "Load findings from file instead of running a new scan")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -176,47 +178,65 @@ func run(cmd *cobra.Command, args []string) error {
 		fmt.Printf("   Found %d existing tracked issue(s)\n", len(existingIssues))
 	}
 
-	// Build existing context for the analysis prompt
-	existingContext := analysis.BuildExistingContext(existingIssues)
+	var allFindings []findings.Finding
+	var scannerStatuses []scanner.ScannerStatus
 
-	// Run analysis with progress tracking
-	fmt.Println("\n🔍 Running analysis...")
-	fmt.Println()
-
-	// Determine if scanners should run
-	skipScanners := flagNoScanners || flagFast
-
-	allFindings, scannerStatuses, err := runAnalysisWithScanners(ctx, flagScope, cfg, scannerCfg, skipScanners, existingContext, extraContext)
-	if err != nil {
-		return fmt.Errorf("analysis failed: %w", err)
-	}
-
-	fmt.Println()
-
-	// Display scanner summary
-	if !skipScanners && len(scannerStatuses) > 0 {
-		displayScannerSummary(scannerStatuses)
-	}
-
-	// Run intelligent deduplication with Copilot
-	// This merges related findings across categories and filters out duplicates of existing issues
-	if len(allFindings) > 0 {
-		fmt.Println()
-		fmt.Println("🔄 Deduplicating findings...")
+	// Load findings from file or run new scan
+	if flagUseExistingFindings {
+		// Load findings from existing file
+		fmt.Printf("\n📂 Loading findings from %s...\n", flagOutput)
 		
-		client := copilot.NewClient()
-		deduplicated, err := client.RunDeduplication(ctx, allFindings, existingIssues)
+		loadedFindings, err := loadFindings(flagOutput)
 		if err != nil {
-			// Log the error but continue with original findings
-			fmt.Printf("   ⚠️  Warning: deduplication failed, continuing with original findings: %v\n", err)
-		} else {
-			beforeDedup := len(allFindings)
-			allFindings = deduplicated
-			deduplicatedCount := beforeDedup - len(allFindings)
-			if deduplicatedCount > 0 {
-				fmt.Printf("   Removed %d duplicate/related finding(s)\n", deduplicatedCount)
+			return err
+		}
+		
+		fmt.Printf("   Loaded %d finding(s)\n", len(loadedFindings))
+		allFindings = loadedFindings
+	} else {
+		// Build existing context for the analysis prompt
+		existingContext := analysis.BuildExistingContext(existingIssues)
+
+		// Run analysis with progress tracking
+		fmt.Println("\n🔍 Running analysis...")
+		fmt.Println()
+
+		// Determine if scanners should run
+		skipScanners := flagNoScanners || flagFast
+
+		var err error
+		allFindings, scannerStatuses, err = runAnalysisWithScanners(ctx, flagScope, cfg, scannerCfg, skipScanners, existingContext, extraContext)
+		if err != nil {
+			return fmt.Errorf("analysis failed: %w", err)
+		}
+
+		fmt.Println()
+
+		// Display scanner summary
+		if !skipScanners && len(scannerStatuses) > 0 {
+			displayScannerSummary(scannerStatuses)
+		}
+
+		// Run intelligent deduplication with Copilot
+		// This merges related findings across categories and filters out duplicates of existing issues
+		if len(allFindings) > 0 {
+			fmt.Println()
+			fmt.Println("🔄 Deduplicating findings...")
+			
+			client := copilot.NewClient()
+			deduplicated, err := client.RunDeduplication(ctx, allFindings, existingIssues)
+			if err != nil {
+				// Log the error but continue with original findings
+				fmt.Printf("   ⚠️  Warning: deduplication failed, continuing with original findings: %v\n", err)
 			} else {
-				fmt.Printf("   No duplicates found\n")
+				beforeDedup := len(allFindings)
+				allFindings = deduplicated
+				deduplicatedCount := beforeDedup - len(allFindings)
+				if deduplicatedCount > 0 {
+					fmt.Printf("   Removed %d duplicate/related finding(s)\n", deduplicatedCount)
+				} else {
+					fmt.Printf("   No duplicates found\n")
+				}
 			}
 		}
 	}
@@ -238,9 +258,13 @@ func run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Save findings to file
-	if err := saveFindings(filtered, flagOutput); err != nil {
-		return fmt.Errorf("failed to save findings: %w", err)
+	// Save findings to file (only when running new scan)
+	// We skip saving when using existing findings to avoid overwriting
+	// the original file with potentially filtered/modified results
+	if !flagUseExistingFindings {
+		if err := saveFindings(filtered, flagOutput); err != nil {
+			return fmt.Errorf("failed to save findings: %w", err)
+		}
 	}
 
 	// Display preview with existing issues
@@ -635,6 +659,23 @@ func saveFindings(allFindings []findings.Finding, outputPath string) error {
 	}
 
 	return os.WriteFile(outputPath, data, 0644)
+}
+
+func loadFindings(inputPath string) ([]findings.Finding, error) {
+	data, err := os.ReadFile(inputPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("findings file not found: %s", inputPath)
+		}
+		return nil, fmt.Errorf("failed to read findings file: %w", err)
+	}
+
+	var allFindings []findings.Finding
+	if err := json.Unmarshal(data, &allFindings); err != nil {
+		return nil, fmt.Errorf("failed to parse findings file: %w", err)
+	}
+
+	return allFindings, nil
 }
 
 func displayPreview(existingIssues []issues.SearchResult, allFindings []findings.Finding, ignoredCount int) {
